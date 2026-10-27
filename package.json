@@ -1,0 +1,22 @@
+{
+  "name": "aqua-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Aqua: discreet panel for Moodle quizzes (Manifest V3, Gemini API)",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test --test-reporter=spec \"test/*.test.js\"",
+    "build": "node scripts/build.mjs",
+    "lint:firefox": "npm run build && web-ext lint -s dist/firefox",
+    "start:firefox": "npm run build && web-ext run -s dist/firefox",
+    "check": "npm test && npm run lint:firefox",
+    "sign:firefox": "npm run build && web-ext sign -s dist/firefox --channel=unlisted",
+    "vendor:pdfjs": "node scripts/vendor-pdfjs.mjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.6",
+    "jsdom": "^26.0.0",
+    "pdfjs-dist": "^6.4.299",
+    "web-ext": "^10.8.0"
+  }
+}

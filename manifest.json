@@ -1,0 +1,86 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "version": "0.6.0",
+  "description": "__MSG_extDescription__",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "aqua-client@example.local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent",
+          "authenticationInfo"
+        ]
+      }
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "scripts": [
+      "src/i18n.js",
+      "src/errors.js",
+      "src/textNormalizer.js",
+      "src/settings.js",
+      "src/prompts.js",
+      "src/answerValidator.js",
+      "src/geminiClient.js",
+      "src/pdfIndex.js",
+      "src/docStore.js",
+      "src/askService.js",
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_title": "__MSG_actionTitle__",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "activate-aqua": {
+      "suggested_key": {
+        "default": "Alt+Shift+Z"
+      },
+      "description": "__MSG_cmdActivate__"
+    },
+    "hide-aqua": {
+      "suggested_key": {
+        "default": "Alt+Shift+X"
+      },
+      "description": "__MSG_cmdHide__"
+    },
+    "move-left": {
+      "suggested_key": {
+        "default": "Ctrl+Alt+Comma"
+      },
+      "description": "__MSG_cmdMoveLeft__"
+    },
+    "move-right": {
+      "suggested_key": {
+        "default": "Ctrl+Alt+Period"
+      },
+      "description": "__MSG_cmdMoveRight__"
+    }
+  },
+  "default_locale": "en"
+}

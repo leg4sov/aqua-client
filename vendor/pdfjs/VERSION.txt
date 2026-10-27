@@ -1,0 +1,7 @@
+pdf.js (pdfjs-dist) 6.4.299
+Source: https://www.npmjs.com/package/pdfjs-dist  ·  https://github.com/mozilla/pdf.js
+License: Apache-2.0 (see LICENSE)
+Files copied UNMODIFIED from node_modules/pdfjs-dist/build/ (readable, non-minified builds).
+Update with:  npm run vendor:pdfjs
+SHA-256 pdf.mjs:        dd13af821c9c3e1778653340d6539a1ba07bc56cba40073a4c727864cf0c232a
+SHA-256 pdf.worker.mjs: 07ceb740d746e5d9012fcf9f27d5c7dea09f7d2f5e74f5c8109e5787551a2333

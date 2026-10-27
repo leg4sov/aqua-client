@@ -1,0 +1,23 @@
+/* Aqua · popup rápido (clic en el icono de la barra). Compacto y con la paleta elegida. */
+:root { --bg: #1c2026; --fg: #b4bac2; --muted: #8f959d; --line: #3a4048; --accent: #b4bac2; --btn-fg: #12151a; }
+html[data-palette="light"] { --bg: #ffffff; --fg: #4b5058; --muted: #6a7078; --line: #d5d8dc; --accent: #4b5058; --btn-fg: #ffffff; }
+html[data-palette="classic"] { --bg: #f4fbfd; --fg: #0b2530; --muted: #3f5b64; --line: #cfe6ec; --accent: #0891b2; --btn-fg: #ffffff; }
+* { box-sizing: border-box; }
+body { width: 232px; margin: 0; padding: 8px; font: 12px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+header strong { font-size: 12px; }
+label.check { display: flex; gap: 6px; align-items: center; margin: 8px 0 0; color: var(--fg); font-size: 11px; cursor: pointer; }
+label.check input { width: auto; margin: 0; }
+a { color: var(--muted); font-size: 11px; }
+label { display: block; margin: 7px 0 2px; color: var(--muted); font-size: 11px; }
+input, select, button { font: inherit; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+input, select { width: 100%; }
+select option { color: #000; background: #fff; }
+.row { display: flex; gap: 4px; }
+.row input { flex: 1; min-width: 0; }
+button { cursor: pointer; white-space: nowrap; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row > button:only-child, #testConn, #openPanel { flex: 1; }
+.status { min-height: 1.3em; margin: 3px 0 0; font-size: 11px; color: var(--muted); }
+[hidden] { display: none !important; }

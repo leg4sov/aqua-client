@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.zip
+.env
+.env.*
+config.local.json
+*.log
+.DS_Store
+web-ext-artifacts/

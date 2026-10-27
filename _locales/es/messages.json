@@ -1,0 +1,23 @@
+{
+  "extName": {
+    "message": "Aqua"
+  },
+  "extDescription": {
+    "message": "Panel discreto para repasar cuestionarios de Moodle con la API de Gemini. Solo se activa cuando tú lo pides."
+  },
+  "actionTitle": {
+    "message": "Aqua: abrir panel de estudio"
+  },
+  "cmdActivate": {
+    "message": "Abrir/activar Aqua en la pestaña actual"
+  },
+  "cmdHide": {
+    "message": "Ocultar el panel de Aqua"
+  },
+  "cmdMoveLeft": {
+    "message": "Mover el panel abajo a la izquierda"
+  },
+  "cmdMoveRight": {
+    "message": "Mover el panel abajo a la derecha"
+  }
+}

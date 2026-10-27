@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-palette="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aqua</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <strong>aqua.client</strong>
+    <a id="more" href="#" data-i18n="pop.more"></a>
+  </header>
+
+  <label for="apiKey" data-i18n="opt.keyLabel"></label>
+  <div class="row">
+    <input id="apiKey" type="password" autocomplete="off" spellcheck="false" data-i18n-ph="opt.keyPlaceholder">
+    <button id="saveKey" type="button" data-i18n="opt.saveKey"></button>
+  </div>
+  <p id="keyStatus" class="status" role="status"></p>
+
+  <div class="row">
+    <button id="testConn" type="button" data-i18n="opt.testConn"></button>
+    <button id="openPanel" type="button" data-i18n="pop.open"></button>
+  </div>
+  <p id="testStatus" class="status" role="status"></p>
+
+  <label for="uiPalette" data-i18n="opt.paletteLabel"></label>
+  <select id="uiPalette">
+    <option value="classic" data-i18n="opt.palClassic"></option>
+    <option value="light" data-i18n="opt.palLight"></option>
+    <option value="dark" data-i18n="opt.palDark"></option>
+  </select>
+
+  <label for="uiSize" data-i18n="opt.sizeLabel"></label>
+  <select id="uiSize">
+    <option value="xxs" data-i18n="opt.sizeXxs"></option>
+    <option value="xs" data-i18n="opt.sizeXs"></option>
+    <option value="s" data-i18n="opt.sizeS"></option>
+    <option value="m" data-i18n="opt.sizeM"></option>
+  </select>
+  <label class="check"><input id="hoverOnly" type="checkbox"> <span data-i18n="pop.hoverOnly"></span></label>
+  <p id="savedStatus" class="status" role="status"></p>
+
+  <script src="src/i18n.js"></script>
+  <script src="src/errors.js"></script>
+  <script src="src/textNormalizer.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

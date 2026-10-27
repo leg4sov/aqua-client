@@ -1,0 +1,90 @@
+/* Aqua · panel compacto y translúcido (dentro de Shadow DOM, aislado de Moodle).
+   Tamaño, opacidad y lado se controlan con variables que fija la extensión desde Ajustes. */
+:host { all: initial; }
+* { box-sizing: border-box; }
+/* El atributo hidden debe ganar a los display:flex de abajo. */
+[hidden] { display: none !important; }
+.panel {
+  --aqua: #0891b2; --aqua-dark: #0e7490; --aqua-soft: #ecfeff;
+  --fg: #12313a; --muted: #5b7881; --bg: #ffffff; --line: #cfe6ec;
+  width: var(--aqua-w, 224px); max-width: calc(100vw - 20px); max-height: 60vh; overflow: auto;
+  font: var(--aqua-fs, 11px)/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  opacity: var(--aqua-op, .55);
+}
+/* Al acercar el ratón o enfocar, se vuelve opaco para poder leerlo bien. */
+.panel:hover, .panel:focus-within { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  .panel { --fg: #e6f6fa; --muted: #93b3bc; --bg: #0f2229; --line: #20414c; --aqua-soft: #12323b; }
+}
+.head { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-bottom: 1px solid var(--line); background: var(--aqua-soft); position: sticky; top: 0; }
+.brand { font-size: .95em; font-weight: 600; color: var(--aqua-dark); letter-spacing: .02em; }
+.spacer { flex: 1; }
+.badge { font-size: .9em; color: var(--muted); }
+.badge.processing, .badge.done, .badge.error { color: var(--fg); } /* sin rojo ni verde: más discreto */
+.body { padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: 2px 7px; }
+button:hover:not(:disabled) { border-color: var(--aqua); }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--aqua); outline-offset: 1px; }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--aqua); border-color: var(--aqua); color: var(--primary-fg, #fff); font-weight: 600; flex: 1; }
+button.primary:hover:not(:disabled) { background: var(--aqua-dark); }
+button.icon { border: 0; background: transparent; padding: 0 3px; font-size: 1.15em; }
+button.small { padding: 0 6px; font-size: .95em; align-self: flex-start; }
+/* Copiar: símbolo pequeño en la esquina de la respuesta */
+.answer, .cmd { position: relative; }
+.answer .atext { padding-right: 16px; }
+button.copy { position: absolute; top: 0; right: 0; border: 0; background: transparent; color: var(--muted); padding: 0 3px; font-size: 1em; line-height: 1.2; }
+button.copy:hover { color: var(--fg); }
+.cmd .code { padding-right: 16px; }
+.row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.controls button { flex: 1; }
+.modes { gap: 8px; }
+.seg { display: flex; gap: 3px; align-items: center; cursor: pointer; }
+.seg input { margin: 0; appearance: none; -webkit-appearance: none; width: .8em; height: .8em; border: 1px solid var(--fg); border-radius: 50%; background: transparent; cursor: pointer; }
+.seg input:checked { background: var(--fg); } /* el círculo del selector: literalmente del color del texto */
+.notice { padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--aqua-soft); }
+.notice.warn { border-color: #e6c36a; background: #fff8e1; color: #5c4300; }
+.notice.error { background: var(--aqua-soft); border-color: var(--line); color: var(--fg); } /* los errores, del color del texto */
+.qlist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; max-height: 110px; overflow: auto; }
+.qbtn { width: 100%; text-align: left; font-size: .95em; padding: 1px 5px; }
+.sent summary { cursor: pointer; color: var(--muted); font-size: .95em; }
+.preview { margin: 3px 0 0; max-height: 90px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: .95em/1.35 ui-monospace, "DejaVu Sans Mono", monospace; padding: 3px 5px; border: 1px dashed var(--line); border-radius: 6px; }
+.result { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 5px; }
+.letters { font-size: 1em; font-weight: 500; letter-spacing: 0; color: var(--fg); line-height: 1.2; } /* resultado Quiz: pequeño y discreto */
+.result.quiz { border-top: 0; padding-top: 0; gap: 2px; }
+.tag { font-size: .9em; color: #8a5a00; }
+.atext { white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+.code { margin: 0 0 3px; padding: 3px 5px; overflow: auto; white-space: pre-wrap; word-break: break-all; font: .95em/1.35 ui-monospace, "DejaVu Sans Mono", monospace; background: var(--aqua-soft); border-radius: 5px; }
+.caveat { font-size: .9em; color: var(--muted); margin: 0; }
+.sr { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+/* Fondo transparente (por defecto): sin relleno de ningún color. El texto se ve nítido (sin halo ni desenfoque)
+   y la opacidad de Ajustes afecta a los bordes. */
+:host([data-bg="transparent"]) .panel {
+  --bg: transparent; --aqua-soft: transparent; --fg: #0b2530; --muted: #2f4a54;
+  --line: rgba(8, 145, 178, var(--aqua-op, .55));
+  opacity: 1;
+}
+:host([data-bg="transparent"]) button.primary { background: transparent; color: var(--aqua-dark); }
+:host([data-bg="transparent"]) .notice.warn { background: transparent; }
+:host([data-bg="transparent"]) .qbtn, :host([data-bg="transparent"]) .code { background: transparent; }
+/* Paletas de color. «Clásica» = colores aqua de siempre (sin reglas extra).
+   «Clara»: texto gris oscuro, discreto pero legible. «Oscura»: texto gris claro, discreto pero legible.
+   En modo fondo transparente solo cambia el color del texto y de los bordes; con fondo sólido también el relleno. */
+:host([data-palette="light"]) .panel { --fg: #4b5058; --muted: #6a7078; --aqua: #6a7078; --aqua-dark: #4b5058; --primary-fg: #fff; }
+:host([data-palette="light"][data-bg="transparent"]) .panel { --line: rgba(75, 80, 88, var(--aqua-op, .55)); }
+:host([data-palette="light"][data-bg="solid"]) .panel { --bg: #ffffff; --aqua-soft: #f1f2f4; --line: #d5d8dc; }
+:host([data-palette="dark"]) .panel { --fg: #b4bac2; --muted: #8f959d; --aqua: #8f959d; --aqua-dark: #b4bac2; --primary-fg: #12151a; }
+:host([data-palette="dark"][data-bg="transparent"]) .panel { --line: rgba(180, 186, 194, var(--aqua-op, .55)); }
+:host([data-palette="dark"][data-bg="solid"]) .panel { --bg: #1c2026; --aqua-soft: #252a31; --line: #3a4048; }
+:host([data-palette="light"]) .tag, :host([data-palette="dark"]) .tag { color: var(--muted); }
+:host([data-palette="light"]) .notice.warn, :host([data-palette="light"]) .notice.error,
+:host([data-palette="dark"]) .notice.warn, :host([data-palette="dark"]) .notice.error { background: var(--aqua-soft); border-color: var(--line); color: var(--fg); }
+/* Modo ultra pequeño: sin cabecera (ni nombre, ni ajustes, ni cerrar), sin «texto enviado» y preguntas solo con su número. */
+:host([data-size="xxs"]) .head, :host([data-size="xxs"]) .sent, :host([data-size="xxs"]) .foot { display: none; }
+:host([data-size="xxs"]) .body { padding: 4px; gap: 3px; }
+:host([data-size="xxs"]) .qlist { flex-direction: row; flex-wrap: wrap; max-height: 64px; gap: 2px; }
+:host([data-size="xxs"]) .qbtn { width: auto; min-width: 22px; text-align: center; padding: 0 5px; }
+:host([data-size="xxs"]) .letters { font-size: .95em; }
+:host([data-size="xxs"]) .controls button { padding: 1px 4px; }
+@media (prefers-reduced-motion: no-preference) { .panel { transition: opacity .12s; } }

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aqua</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>Aqua <small data-i18n="opt.title"></small></h1>
+
+    <section>
+      <h2 data-i18n="opt.langHeading"></h2>
+      <label for="lang" data-i18n="opt.langLabel"></label>
+      <select id="lang">
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+      <p id="langStatus" class="status" role="status"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.keyHeading"></h2>
+      <p class="hint"><span data-i18n="opt.keyHint1"></span><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a><span data-i18n="opt.keyHint2"></span><code>storage.local</code><span data-i18n="opt.keyHint3"></span></p>
+      <label for="apiKey" data-i18n="opt.keyLabel"></label>
+      <div class="row">
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" data-i18n-ph="opt.keyPlaceholder">
+        <button id="toggleKey" type="button"></button>
+      </div>
+      <div class="row">
+        <button id="saveKey" type="button" class="primary" data-i18n="opt.saveKey"></button>
+        <button id="deleteKey" type="button" data-i18n="opt.deleteKey"></button>
+      </div>
+      <p id="keyStatus" class="status" role="status"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.modelHeading"></h2>
+      <label for="model" data-i18n="opt.modelLabel"></label>
+      <input id="model" list="models" autocomplete="off" spellcheck="false">
+      <datalist id="models"></datalist>
+      <p class="hint"><span data-i18n="opt.modelHint1"></span><code id="defaultModel"></code><span data-i18n="opt.modelHint2"></span><a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener noreferrer" data-i18n="opt.modelHint3"></a><span data-i18n="opt.modelHint4"></span></p>
+      <label for="timeoutMs" data-i18n="opt.timeoutLabel"></label>
+      <input id="timeoutMs" type="number" min="5000" max="120000" step="1000">
+      <label for="maxChars" data-i18n="opt.maxCharsLabel"></label>
+      <input id="maxChars" type="number" min="200" max="12000" step="100">
+      <div class="row">
+        <button id="saveSettings" type="button" class="primary" data-i18n="opt.saveSettings"></button>
+        <button id="testConn" type="button" data-i18n="opt.testConn"></button>
+      </div>
+      <p id="settingsStatus" class="status" role="status"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.custHeading"></h2>
+      <p class="hint"><span data-i18n="opt.custHint1"></span><strong data-i18n="opt.custHint2"></strong><span data-i18n="opt.custHint3"></span><strong data-i18n="opt.custHint4"></strong><span data-i18n="opt.custHint5"></span></p>
+      <label for="uiPalette" data-i18n="opt.paletteLabel"></label>
+      <select id="uiPalette">
+        <option value="classic" data-i18n="opt.palClassic"></option>
+        <option value="light" data-i18n="opt.palLight"></option>
+        <option value="dark" data-i18n="opt.palDark"></option>
+      </select>
+      <div class="swatches" aria-hidden="true">
+        <div class="swatch light"><span id="swA" data-i18n="opt.swatchText"></span></div>
+        <div class="swatch dark"><span id="swB" data-i18n="opt.swatchText"></span></div>
+      </div>
+      <p class="hint" data-i18n="opt.swatchHint"></p>
+      <label for="uiSize" data-i18n="opt.sizeLabel"></label>
+      <select id="uiSize">
+        <option value="xxs" data-i18n="opt.sizeXxs"></option>
+        <option value="xs" data-i18n="opt.sizeXs"></option>
+        <option value="s" data-i18n="opt.sizeS"></option>
+        <option value="m" data-i18n="opt.sizeM"></option>
+      </select>
+      <label for="uiOpacity"><span data-i18n="opt.opacityLabel"></span> <span id="uiOpacityVal"></span>% <span data-i18n="opt.opacityMin"></span></label>
+      <input id="uiOpacity" type="range" min="30" max="100" step="5">
+      <label for="uiBg" data-i18n="opt.bgLabel"></label>
+      <select id="uiBg">
+        <option value="transparent" data-i18n="opt.bgTransparent"></option>
+        <option value="solid" data-i18n="opt.bgSolid"></option>
+      </select>
+      <label for="uiSide" data-i18n="opt.sideLabel"></label>
+      <select id="uiSide">
+        <option value="left" data-i18n="opt.sideLeft"></option>
+        <option value="right" data-i18n="opt.sideRight"></option>
+      </select>
+      <label class="check"><input id="hoverOnly" type="checkbox"> <span data-i18n="opt.hoverOnly"></span></label>
+      <p class="hint" data-i18n="opt.hoverHint"></p>
+      <label class="check"><input id="idleEnabled" type="checkbox"> <span data-i18n="opt.idleEnable"></span></label>
+      <p class="hint" data-i18n="opt.idleHint"></p>
+      <label for="idleSeconds" data-i18n="opt.idleSeconds"></label>
+      <input id="idleSeconds" type="number" min="1" max="300" step="1">
+      <div class="row"><button id="saveUi" type="button" class="primary" data-i18n="opt.saveUi"></button></div>
+      <p id="uiStatus" class="status" role="status"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.accessHeading"></h2>
+      <p class="hint"><span data-i18n="opt.accessHint1"></span><code>generativelanguage.googleapis.com</code><span data-i18n="opt.accessHint2"></span></p>
+      <div class="row"><button id="grantAccess" type="button" class="primary" hidden data-i18n="opt.grant"></button></div>
+      <p id="accessStatus" class="status" role="status"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.docsHeading"></h2>
+      <p class="hint" data-i18n="opt.docsHint"></p>
+      <p id="docsWarn" class="hint warn" hidden data-i18n="opt.docsWarn"></p>
+      <label class="check"><input id="docsEnabled" type="checkbox"> <span data-i18n="opt.docsEnable"></span></label>
+      <label for="docsK" data-i18n="opt.docsK"></label>
+      <input id="docsK" type="number" min="1" max="8" step="1">
+      <div class="row">
+        <button id="docsAdd" type="button" class="primary" data-i18n="opt.docsAdd"></button>
+        <button id="docsDeleteAll" type="button" hidden data-i18n="opt.docsDeleteAll"></button>
+      </div>
+      <input id="docsFiles" type="file" accept="application/pdf,.pdf" multiple hidden>
+      <p id="docsStatus" class="status" role="status"></p>
+      <ul id="docsResults" class="hint results"></ul>
+      <p id="docsNone" class="hint" data-i18n="opt.docsNone"></p>
+      <ul id="docsList" class="docs"></ul>
+      <p id="docsUsage" class="hint"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.scHeading"></h2>
+      <table id="shortcuts"><thead><tr><th data-i18n="opt.scAction"></th><th data-i18n="opt.scCurrent"></th><th id="changeCol" hidden data-i18n="opt.scChange"></th></tr></thead><tbody></tbody></table>
+      <p id="shortcutStatus" class="status" role="status"></p>
+      <p id="shortcutHelp" class="hint"></p>
+    </section>
+
+    <section>
+      <h2 data-i18n="opt.privHeading"></h2>
+      <ul class="hint">
+        <li data-i18n="opt.priv1"></li>
+        <li data-i18n="opt.priv2"></li>
+        <li data-i18n="opt.priv3"></li>
+        <li data-i18n="opt.priv4"></li>
+        <li data-i18n="opt.priv5"></li>
+      </ul>
+    </section>
+  </main>
+  <script src="src/i18n.js"></script>
+  <script src="src/errors.js"></script>
+  <script src="src/textNormalizer.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="src/shortcuts.js"></script>
+  <script src="src/pdfIndex.js"></script>
+  <script src="src/docStore.js"></script>
+  <script src="src/pdfText.js"></script>
+  <script src="src/docManager.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
