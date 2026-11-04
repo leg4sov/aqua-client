@@ -1,0 +1,20 @@
+{
+  "extName": {
+    "message": "Aqua"
+  },
+  "actionTitle": {
+    "message": "Aqua: open study panel"
+  },
+  "cmdActivate": {
+    "message": "Open/activate Aqua on the current tab"
+  },
+  "cmdHide": {
+    "message": "Hide the Aqua panel"
+  },
+  "cmdMoveLeft": {
+    "message": "Move the panel to the bottom left"
+  },
+  "cmdMoveRight": {
+    "message": "Move the panel to the bottom right"
+  }
+}

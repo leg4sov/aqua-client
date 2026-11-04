@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aqua</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <!-- Barra superior (estética Moodle) -->
+  <nav class="navbar" aria-label="Aqua">
+    <a class="brand" href="#" aria-label="Aqua">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="19" fill="#e3150d"/>
+        <path d="M20 7.5C20 7.5 11.5 17.6 11.5 23.2c0 4.7 3.8 8.5 8.5 8.5s8.5-3.8 8.5-8.5C28.5 17.6 20 7.5 20 7.5Z" fill="#fff"/>
+        <path d="M15.8 24.2c0 2.3 1.3 4.1 3.2 4.8" fill="none" stroke="#e3150d" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">AQUA</span>
+    </a>
+    <ul class="primary-nav">
+      <li><a href="#" data-i18n="opt.navHome"></a></li>
+      <li><a href="#" data-i18n="opt.navDash"></a></li>
+      <li><a href="#" data-i18n="opt.navCourses"></a></li>
+      <li><a href="#" class="has-caret"><span data-i18n="opt.navHelp"></span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a></li>
+    </ul>
+    <div class="nav-right" aria-hidden="true">
+      <svg class="nav-ico" viewBox="0 0 24 24"><path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22Zm6.5-6.2V11a6.5 6.5 0 0 0-5-6.3V4a1.5 1.5 0 0 0-3 0v.7a6.5 6.5 0 0 0-5 6.3v4.8L4 17.8V19h16v-1.2l-1.5-2Z"/></svg>
+      <svg class="nav-ico" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-5 4V5a1 1 0 0 1 1-1Z"/></svg>
+      <span class="user-name" data-i18n="opt.user"></span>
+      <span class="avatar">US</span>
+    </div>
+  </nav>
+
+  <div class="page">
+    <!-- Cabecera de página con migas de pan -->
+    <header class="page-header">
+      <h1 data-i18n="opt.title"></h1>
+      <ol class="breadcrumb" aria-label="Breadcrumb">
+        <li><a href="#" data-i18n="opt.navDash"></a></li>
+        <li><a href="#">Aqua</a></li>
+        <li><a href="#" id="crumbTab"></a></li>
+      </ol>
+    </header>
+
+    <div class="layout">
+      <!-- Bloque izquierdo: navegación (los temas son los apartados de ajustes) -->
+      <aside class="side side-left">
+        <section class="block">
+          <h3 data-i18n="opt.navBlock"></h3>
+          <ul class="tree">
+            <li class="open"><a href="#" class="tree-node" data-i18n="opt.navDash"></a>
+              <ul>
+                <li><a href="#" class="home-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3L12 3Z"/></svg><span>Aqua</span></a></li>
+                <li class="open"><a href="#" class="tree-node" data-i18n="opt.navSettings"></a>
+                  <ul>
+                <li><a href="#" data-tab-link="lang" data-i18n="opt.langHeading"></a></li>
+                <li><a href="#" data-tab-link="key" data-i18n="opt.keyHeading"></a></li>
+                <li><a href="#" data-tab-link="model" data-i18n="opt.modelHeading"></a></li>
+                <li><a href="#" data-tab-link="cust" data-i18n="opt.custHeading"></a></li>
+                <li><a href="#" data-tab-link="docs" data-i18n="opt.docsHeading"></a></li>
+                <li><a href="#" data-tab-link="sc" data-i18n="opt.scHeading"></a></li>
+                <li><a href="#" data-tab-link="priv" data-i18n="opt.privHeading"></a></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+      </aside>
+
+      <!-- Contenido: pestañas como las de un curso -->
+      <main class="content">
+        <div class="content-card">
+          <ul class="nav-tabs" role="tablist">
+            <li role="presentation"><button type="button" class="tab active" id="tab-lang" role="tab" aria-controls="panel-lang" aria-selected="true" tabindex="0" data-tab="lang" data-i18n="opt.langHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-key" role="tab" aria-controls="panel-key" aria-selected="false" tabindex="-1" data-tab="key" data-i18n="opt.keyHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-model" role="tab" aria-controls="panel-model" aria-selected="false" tabindex="-1" data-tab="model" data-i18n="opt.modelHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-cust" role="tab" aria-controls="panel-cust" aria-selected="false" tabindex="-1" data-tab="cust" data-i18n="opt.custHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-docs" role="tab" aria-controls="panel-docs" aria-selected="false" tabindex="-1" data-tab="docs" data-i18n="opt.docsHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-sc" role="tab" aria-controls="panel-sc" aria-selected="false" tabindex="-1" data-tab="sc" data-i18n="opt.scHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-priv" role="tab" aria-controls="panel-priv" aria-selected="false" tabindex="-1" data-tab="priv" data-i18n="opt.privHeading"></button></li>
+          </ul>
+
+      <section class="tabpanel" id="panel-lang" role="tabpanel" aria-labelledby="tab-lang" data-panel="lang">
+        <h2 data-i18n="opt.langHeading"></h2>
+        <label for="lang" data-i18n="opt.langLabel"></label>
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+        <p id="langStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-key" role="tabpanel" aria-labelledby="tab-key" data-panel="key" hidden>
+        <h2 data-i18n="opt.keyHeading"></h2>
+        <p class="hint"><span data-i18n="opt.keyHint1"></span><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a><span data-i18n="opt.keyHint2"></span><code>storage.local</code><span data-i18n="opt.keyHint3"></span></p>
+        <label for="apiKey" data-i18n="opt.keyLabel"></label>
+        <div class="row">
+          <input id="apiKey" type="password" autocomplete="off" spellcheck="false" data-i18n-ph="opt.keyPlaceholder">
+          <button id="toggleKey" type="button"></button>
+        </div>
+        <div class="row">
+          <button id="saveKey" type="button" class="primary" data-i18n="opt.saveKey"></button>
+          <button id="deleteKey" type="button" data-i18n="opt.deleteKey"></button>
+        </div>
+        <p id="keyStatus" class="status" role="status"></p>
+        <p class="hint"><span data-i18n="opt.accessHint1"></span><code>generativelanguage.googleapis.com</code><span data-i18n="opt.accessHint2"></span></p>
+        <div class="row"><button id="grantAccess" type="button" class="primary" hidden data-i18n="opt.grant"></button></div>
+        <p id="accessStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-model" role="tabpanel" aria-labelledby="tab-model" data-panel="model" hidden>
+        <h2 data-i18n="opt.modelHeading"></h2>
+        <label for="model" data-i18n="opt.modelLabel"></label>
+        <input id="model" list="models" autocomplete="off" spellcheck="false">
+        <datalist id="models"></datalist>
+        <p class="hint"><span data-i18n="opt.modelHint1"></span><code id="defaultModel"></code><span data-i18n="opt.modelHint2"></span><a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener noreferrer" data-i18n="opt.modelHint3"></a><span data-i18n="opt.modelHint4"></span></p>
+        <div class="grid2">
+          <div>
+            <label for="timeoutMs" data-i18n="opt.timeoutLabel"></label>
+            <input id="timeoutMs" type="number" min="5000" max="120000" step="1000">
+          </div>
+          <div>
+            <label for="maxChars" data-i18n="opt.maxCharsLabel"></label>
+            <input id="maxChars" type="number" min="200" max="12000" step="100">
+          </div>
+        </div>
+        <div class="row">
+          <button id="saveSettings" type="button" class="primary" data-i18n="opt.saveSettings"></button>
+          <button id="testConn" type="button" data-i18n="opt.testConn"></button>
+        </div>
+        <p id="settingsStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-cust" role="tabpanel" aria-labelledby="tab-cust" data-panel="cust" hidden>
+        <h2 data-i18n="opt.custHeading"></h2>
+        <p class="hint"><span data-i18n="opt.custHint1"></span><strong data-i18n="opt.custHint2"></strong><span data-i18n="opt.custHint3"></span><strong data-i18n="opt.custHint4"></strong><span data-i18n="opt.custHint5"></span></p>
+        <label for="uiPalette" data-i18n="opt.paletteLabel"></label>
+        <select id="uiPalette">
+          <option value="classic" data-i18n="opt.palClassic"></option>
+          <option value="light" data-i18n="opt.palLight"></option>
+          <option value="dark" data-i18n="opt.palDark"></option>
+        </select>
+        <div class="swatches" aria-hidden="true">
+          <div class="swatch light"><span id="swA" data-i18n="opt.swatchText"></span></div>
+          <div class="swatch dark"><span id="swB" data-i18n="opt.swatchText"></span></div>
+        </div>
+        <p class="hint" data-i18n="opt.swatchHint"></p>
+        <div class="grid2">
+          <div>
+            <label for="uiSize" data-i18n="opt.sizeLabel"></label>
+            <select id="uiSize">
+              <option value="xxs" data-i18n="opt.sizeXxs"></option>
+              <option value="xs" data-i18n="opt.sizeXs"></option>
+              <option value="m" data-i18n="opt.sizeM"></option>
+            </select>
+          </div>
+          <div>
+            <label for="uiSide" data-i18n="opt.sideLabel"></label>
+            <select id="uiSide">
+              <option value="left" data-i18n="opt.sideLeft"></option>
+              <option value="right" data-i18n="opt.sideRight"></option>
+            </select>
+          </div>
+          <div>
+            <label for="uiBg" data-i18n="opt.bgLabel"></label>
+            <select id="uiBg">
+              <option value="transparent" data-i18n="opt.bgTransparent"></option>
+              <option value="solid" data-i18n="opt.bgSolid"></option>
+            </select>
+          </div>
+        </div>
+        <label for="uiOpacity"><span data-i18n="opt.opacityLabel"></span> <span id="uiOpacityVal"></span>% <span data-i18n="opt.opacityMin"></span></label>
+        <input id="uiOpacity" type="range" min="30" max="100" step="5">
+        <label class="check"><input id="hoverOnly" type="checkbox"> <span data-i18n="opt.hoverOnly"></span></label>
+        <p class="hint" data-i18n="opt.hoverHint"></p>
+        <label class="check"><input id="idleEnabled" type="checkbox"> <span data-i18n="opt.idleEnable"></span></label>
+        <p class="hint" data-i18n="opt.idleHint"></p>
+        <label for="idleSeconds" data-i18n="opt.idleSeconds"></label>
+        <input id="idleSeconds" type="number" min="1" max="300" step="1">
+        <div class="row"><button id="saveUi" type="button" class="primary" data-i18n="opt.saveUi"></button></div>
+        <p id="uiStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-docs" role="tabpanel" aria-labelledby="tab-docs" data-panel="docs" hidden>
+        <h2 data-i18n="opt.docsHeading"></h2>
+        <p class="hint" data-i18n="opt.docsHint"></p>
+        <p id="docsWarn" class="hint warn" hidden data-i18n="opt.docsWarn"></p>
+        <label class="check"><input id="docsEnabled" type="checkbox"> <span data-i18n="opt.docsEnable"></span></label>
+        <label for="docsK" data-i18n="opt.docsK"></label>
+        <input id="docsK" type="number" min="1" max="8" step="1">
+        <div class="row">
+          <button id="docsAdd" type="button" class="primary" data-i18n="opt.docsAdd"></button>
+          <button id="docsDeleteAll" type="button" hidden data-i18n="opt.docsDeleteAll"></button>
+        </div>
+        <input id="docsFiles" type="file" accept="application/pdf,.pdf" multiple hidden>
+        <p id="docsStatus" class="status" role="status"></p>
+        <ul id="docsResults" class="hint results"></ul>
+        <p id="docsNone" class="hint" data-i18n="opt.docsNone"></p>
+        <ul id="docsList" class="docs"></ul>
+        <p id="docsUsage" class="hint"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" data-panel="sc" hidden>
+        <h2 data-i18n="opt.scHeading"></h2>
+        <table id="shortcuts"><thead><tr><th data-i18n="opt.scAction"></th><th data-i18n="opt.scCurrent"></th><th id="changeCol" hidden data-i18n="opt.scChange"></th></tr></thead><tbody></tbody></table>
+        <p id="shortcutStatus" class="status" role="status"></p>
+        <p id="shortcutHelp" class="hint"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-priv" role="tabpanel" aria-labelledby="tab-priv" data-panel="priv" hidden>
+        <h2 data-i18n="opt.privHeading"></h2>
+        <ul class="hint plain">
+          <li data-i18n="opt.priv1"></li>
+          <li data-i18n="opt.priv2"></li>
+          <li data-i18n="opt.priv3"></li>
+          <li data-i18n="opt.priv4"></li>
+          <li data-i18n="opt.priv5"></li>
+        </ul>
+      </section>
+        </div>
+      </main>
+
+      <!-- Bloques derechos (genéricos) -->
+      <aside class="side side-right">
+        <section class="block">
+          <h3 data-i18n="opt.blkNotices"></h3>
+          <p data-i18n="opt.blkNoticesNone"></p>
+        </section>
+        <section class="block">
+          <h3 data-i18n="opt.blkActivity"></h3>
+          <p data-i18n="opt.blkActivityNone"></p>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script src="src/i18n.js"></script>
+  <script src="src/errors.js"></script>
+  <script src="src/textNormalizer.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="src/shortcuts.js"></script>
+  <script src="src/pdfIndex.js"></script>
+  <script src="src/docStore.js"></script>
+  <script src="src/pdfText.js"></script>
+  <script src="src/docManager.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

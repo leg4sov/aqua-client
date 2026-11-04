@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aqua</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <section id="viewBright">
+    <header class="hero">
+      <div class="hero-inner">
+        <button id="toSettings" type="button" class="logo-btn" data-i18n-aria="pop.settingsHint">
+        <svg class="logo" viewBox="0 0 128 128" aria-hidden="true">
+          <defs>
+            <linearGradient id="drop-g" x1="64" y1="8" x2="64" y2="122" gradientUnits="userSpaceOnUse">
+              <stop class="s1" offset="0" stop-color="#d0d4d6"/>
+              <stop class="s2" offset="0.55" stop-color="#a4abaf"/>
+              <stop class="s3" offset="1" stop-color="#7a8388"/>
+            </linearGradient>
+          </defs>
+          <path d="M64 8C64 8 24 56 24 82c0 22.1 17.9 40 40 40s40-17.9 40-40C104 56 64 8 64 8Z" fill="url(#drop-g)"/>
+          <path d="M45 86c0 10.5 6 19 15 22.5" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+        </button>
+        <div class="hero-text">
+          <h1>Aqua</h1>
+        </div>
+      </div>
+      <svg class="wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 44C180 88 360 4 600 38s420 52 640 6c80-17 150-20 200-10V80H0Z"/>
+    </svg>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="between">
+          <label for="brightLevel" data-i18n="pop.brightness"></label>
+          <span><span id="brightValue" class="value">100%</span> <button id="brightReset" type="button" class="mini" data-i18n="pop.reset"></button></span>
+        </div>
+        <input id="brightLevel" type="range" min="30" max="150" step="1" value="100">
+        <p id="brightStatus" class="status" role="status"></p>
+      </section>
+    </main>
+  </section>
+
+  <section id="viewSettings" hidden>
+    <header class="hero compact">
+      <div class="hero-inner between">
+        <button id="toBright" type="button" class="pill" data-i18n="pop.back"></button>
+        <h1>Aqua</h1>
+        <a id="more" href="#" data-i18n="pop.more"></a>
+      </div>
+      <svg class="wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 44C180 88 360 4 600 38s420 52 640 6c80-17 150-20 200-10V80H0Z"/>
+    </svg>
+    </header>
+
+    <main>
+      <section class="card">
+        <label for="apiKey" data-i18n="opt.keyLabel"></label>
+        <div class="row">
+          <input id="apiKey" type="password" autocomplete="off" spellcheck="false" data-i18n-ph="opt.keyPlaceholder">
+          <button id="saveKey" type="button" class="primary" data-i18n="opt.saveKey"></button>
+        </div>
+        <p id="keyStatus" class="status" role="status"></p>
+        <div class="row">
+          <button id="testConn" type="button" data-i18n="opt.testConn"></button>
+          <button id="openPanel" type="button" class="primary" data-i18n="pop.open"></button>
+        </div>
+        <p id="testStatus" class="status" role="status"></p>
+        <div class="grid2">
+          <div>
+            <label for="uiSize" data-i18n="opt.sizeLabel"></label>
+            <select id="uiSize">
+              <option value="xxs" data-i18n="opt.sizeXxs"></option>
+              <option value="xs" data-i18n="opt.sizeXs"></option>
+              <option value="m" data-i18n="opt.sizeM"></option>
+            </select>
+          </div>
+        </div>
+        <label class="check"><input id="hoverOnly" type="checkbox"> <span data-i18n="pop.hoverOnly"></span></label>
+        <p id="savedStatus" class="status" role="status"></p>
+      </section>
+    </main>
+  </section>
+
+  <script src="src/i18n.js"></script>
+  <script src="src/errors.js"></script>
+  <script src="src/textNormalizer.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
