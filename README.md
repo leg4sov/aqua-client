@@ -26,7 +26,7 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 ## Features
 
 - **On-demand panel** — Aqua does nothing until you open it with a keyboard shortcut or the extension popup.
-- **Three answer modes** — **Quiz** shows only the question number and option letter(s), **Short** gives a brief written answer, and **Long** gives a medium-length written response.
+- **Three answer modes** — **Quiz** shows only the question number and option letter(s); **Text** gives a written answer (short or long, chosen inside the mode); **Image** answers a question from a screenshot you paste, for unusual question types (ordering, fill in the blanks…).
 - **Moodle question detection** — extracts supported questions from Moodle pages, or lets you ask about text you select yourself.
 - **Gemini API integration** — use your own Google AI Studio API key and choose the model in settings.
 - **Optional reference PDFs** — add your own text-based PDFs; Aqua searches them locally and adds the most relevant excerpts to the request as reference (disabled by default).
@@ -222,12 +222,23 @@ Aqua does not run automatically in the background and does not submit anything t
 | Mode | Best for | Output |
 |---|---|---|
 | **Quiz** | Single- or multiple-choice questions | Only the question number and option letter(s), such as `3) B` or `2) A, C` — small and discreet |
-| **Short** | Short written answers | One or two sentences (about 30–40 words) in a natural, direct tone, without stock AI phrases, lists or Markdown; with a copy button |
-| **Long** | Open-ended questions | A medium-length response, usually around 80–150 words, with a copy button |
+| **Text → Short** | Short written answers | One or two sentences (about 30–40 words) in a natural, direct tone, without stock AI phrases, lists or Markdown |
+| **Text → Long** | Open-ended questions | A medium-length response, usually around 80–150 words |
+| **Image** | Questions that are hard to extract as text (put in order, fill in the blanks, matching…) | The shortest text that answers exactly; several items go on separate lines, and several words to fill in are written the way a person would |
 
-Written answers include a small **⧉** symbol to copy the text (it turns into ✓ when copied). The panel warns you if you try to use Quiz mode without answer options. The **Sent text** disclosure shows the exact text prepared for Gemini after the extension's redaction step, including any PDF excerpts.
+**Text** shows a small *Short · Long* choice only while it is selected, to save space. Written answers appear in small type (just so you can see how much text there is). If there are several separate texts, each goes on its own line. **Click a line to copy it** — there is no need to select it; it dims for a moment to confirm. The panel warns you if you try to use Quiz mode without answer options. The **Sent text** disclosure shows the exact text prepared for Gemini after the extension's redaction step, including any PDF excerpts.
 
 If the model cannot answer confidently, Aqua can label the result **Hypothesis** or **Insufficient data**. Any commands or instructions returned by the model are never executed.
+
+### Image mode (paste a screenshot)
+
+1. Take a screenshot yourself (for example with your system's screenshot tool, copying it to the clipboard).
+2. In Aqua, choose **Image**, click the small box and press **Ctrl+V**. The image is **not displayed**; a short note says it was loaded and will be sent.
+3. Click **Ask**. The answer comes back as brief text, with one line per item, and each line copies when clicked.
+
+Aqua shrinks the image in your browser (longest side 1,568 px, re-encoded as JPEG) before sending it, keeps it only in memory and discards it after the answer. An image uses roughly 300–1,000 tokens and counts as **one** request. Note: the text redaction cannot hide personal data inside an image (your name, email or campus details in a screenshot), so crop the screenshot to the question.
+
+**With your PDFs (optional):** in **Settings → Reference documents (PDF)**, with *Use my PDFs as reference* on, tick **Also use my PDFs for image questions**. Aqua then makes **two requests per image**: first Gemini reads the question from the image, Aqua searches your PDFs locally with that text, and then the image is sent together with the excerpts (visible under **Sent text**). The image goes to Google in both requests. If the option is off, the PDFs are not used with images.
 
 ### Reference PDFs (optional)
 
@@ -247,6 +258,8 @@ If no excerpt matches well enough (at least two distinct question terms must mat
 **Privacy:** the excerpts are redacted like any other text and are sent to Google together with the question. File names are never sent. The PDFs and their index stay on your computer until you delete them in settings.
 
 **Limits:** 10 documents, 20 MB per file, 1,000 pages per PDF and about 3 million characters in total. Adding a file with the same name replaces the old one.
+
+**Private mode:** the PDF index is stored in the browser's IndexedDB, which Firefox blocks in private windows and when it is set to *never remember history*. PDFs cannot be added in those cases (the settings page shows a note when you enable the option).
 
 ### Change the panel appearance
 
@@ -324,8 +337,8 @@ The tests cover core logic and simulated API responses, including:
 - Network errors, timeouts, rate limits, invalid keys and missing models.
 - Empty, blocked, truncated and malformed responses.
 - Request cancellation and late responses.
-- Quiz, Short and Long modes, including the `n) letter` output.
-- Clipboard fallback behaviour.
+- Quiz, Text (short/long) and Image modes, including the `n) letter` output, one clickable line per text and the image pipeline.
+- Clipboard fallback behaviour and copying a single line.
 - HTML injection in model responses.
 - Ensuring Moodle forms are not modified.
 - Keeping the API key out of the content script.
@@ -370,6 +383,7 @@ aqua-client/
 │   ├── docStore               # IndexedDB store
 │   ├── docManager             # adding PDFs, limits
 │   ├── askService
+│   ├── imageUtil              # pasted image: resize + re-encode
 │   ├── ui
 │   └── controller
 ├── vendor/
@@ -397,18 +411,20 @@ aqua-client/
 | Model not found | Choose a currently available model in settings |
 | Response blocked | Gemini's safety filters may have blocked the request; try a different, appropriate question |
 | Unexpected response format | The model did not return the expected JSON; retry or select another model |
-| "Quiz mode is for choice questions" | The selected text has no numbered options; use **Questions** to load a Moodle question, or switch to **Short** or **Long** |
+| "Quiz mode is for choice questions" | The selected text has no numbered options; use **Questions** to load a Moodle question, or switch to **Text** |
 | "No text found" when adding a PDF | The PDF is probably scanned images; Aqua cannot read images. Use a PDF with selectable text |
 | PDF excerpts never appear | Check that *Use my PDFs as reference* is ticked, that documents are listed, and that the question shares at least two words with the documents (the search is by keywords, not meaning) |
 | Panel styling is missing | A strict Content Security Policy on the page may block styles inside Shadow DOM |
 | Copying fails | The page may restrict clipboard access; select and copy the response manually |
+| Pasting an image does nothing | Choose **Image**, click the small box first, then press Ctrl+V; the clipboard must hold an image (PNG/JPEG/WebP), not a file path |
+| "Unexpected error" when adding a PDF | Firefox private window or *never remember history* blocks IndexedDB; use a normal window with history enabled |
 
 ## Known limitations
 
 - Real-browser and live-API testing remains to be completed.
 - Moodle detection relies on page markers and may fail on customised themes; there is no manual “force Moodle” option yet.
 - Question extraction has been tested against example HTML. Drag-and-drop, matching and cloze questions may be incomplete; Aqua displays a warning in supported cases.
-- Images embedded in questions are not sent to Gemini.
+- Images embedded in questions are not sent to Gemini automatically; use **Image** mode with a screenshot instead. Image paste has been tested with a synthetic clipboard event, not yet with a real system clipboard in Firefox.
 - PDF search is keyword-based (BM25), not semantic: a question that uses different words from the document may find nothing. Scanned PDFs, password-protected PDFs, and the layout of tables and formulas are not handled well.
 - Aqua does not search the web. The model answers from the supplied excerpts or its own knowledge.
 - Long answers are displayed as plain text; Markdown is not rendered.

@@ -196,11 +196,19 @@ async function renderDocs() {
   $('docsUsage').textContent = list.length ? T('opt.docsUsage', { used: list.length, max: DM.LIMITS.maxDocs, chars: chars.toLocaleString(lang) }) : '';
 }
 
+// Al activar los PDF: aviso de coste/privacidad y de que no funcionan en modo privado; «PDF + imagen» solo se puede marcar con los PDF activos.
+function paintDocsOptions(d) {
+  $('docsWarn').hidden = !d.enabled;
+  $('docsPrivate').hidden = !d.enabled;
+  $('docsImage').disabled = !d.enabled;
+  $('docsImage').checked = d.enabled && d.imageSearch;
+}
+
 async function saveDocsSettings() {
-  const s = S.sanitizeSettings({ ...(await currentSettings()), docs: { enabled: $('docsEnabled').checked, k: $('docsK').value } });
+  const s = S.sanitizeSettings({ ...(await currentSettings()), docs: { enabled: $('docsEnabled').checked, k: $('docsK').value, imageSearch: $('docsImage').checked } });
   await api.storage.local.set({ [SETTINGS]: s });
   $('docsK').value = s.docs.k;
-  $('docsWarn').hidden = !s.docs.enabled; // al activarlo se muestra el aviso de coste y privacidad
+  paintDocsOptions(s.docs);
   say('docsStatus', T('opt.docsSaved'), 'ok');
 }
 
@@ -247,7 +255,7 @@ async function load() {
   $('hoverOnly').checked = s.ui.hoverOnly;
   $('docsEnabled').checked = s.docs.enabled;
   $('docsK').value = s.docs.k;
-  $('docsWarn').hidden = !s.docs.enabled;
+  paintDocsOptions(s.docs);
   $('idleEnabled').checked = s.idle.enabled;
   $('idleSeconds').value = s.idle.seconds;
   $('defaultModel').textContent = S.DEFAULT_MODEL;
@@ -341,6 +349,7 @@ $('grantAccess').addEventListener('click', async () => {
 
 $('docsEnabled').addEventListener('change', saveDocsSettings);
 $('docsK').addEventListener('change', saveDocsSettings);
+$('docsImage').addEventListener('change', saveDocsSettings);
 $('docsAdd').addEventListener('click', () => $('docsFiles').click());
 $('docsFiles').addEventListener('change', async () => {
   const files = [...$('docsFiles').files];

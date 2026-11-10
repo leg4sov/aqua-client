@@ -166,3 +166,46 @@ test('PDF: el mensaje de la consulta ignora refIds mal formados', async () => {
   assert.equal(r.ok, true);
   assert.equal(r.refs, 0);
 });
+
+// ---- Modo imagen
+const IMG = { mime: 'image/jpeg', data: 'QUJDREVG' };
+const imgMsg = (o) => msg({ mode: 'image', text: '', meta: { type: 'other', optionCount: 0 }, image: IMG, ...o });
+
+test('imagen: va antes del texto en la petición, sin DATA ni texto del usuario, y la respuesta se queda en lo breve', async () => {
+  let sent;
+  const s = svc(async (u, init) => { sent = JSON.parse(init.body); return geminiOk({ status: 'confirmed', answer_text: '1) a\n2) b', explanation: 'larga', caveats: 'x', commands: [{ command: 'ls' }] }); });
+  const r = await s.handleAsk(imgMsg(), 1);
+  assert.equal(r.ok, true);
+  const parts = sent.contents[0].parts;
+  assert.deepEqual(parts[0], { inlineData: { mimeType: 'image/jpeg', data: 'QUJDREVG' } });
+  assert.ok(parts[1].text.includes('MODE: image') && !parts[1].text.includes('<<<DATA_'));
+  assert.equal(r.result.answerText, '1) a\n2) b');
+  assert.equal(r.result.explanation, '');
+  assert.deepEqual(r.result.commands, []);
+  assert.equal(r.result.caveats, '');
+});
+test('imagen: solo JPEG/PNG/WEBP en base64 válido y de tamaño razonable; sin respuesta de texto es error', async () => {
+  const s = svc(async () => geminiOk({ status: 'confirmed', answer_text: 'x' }));
+  for (const image of [undefined, { mime: 'image/svg+xml', data: 'QUJD' }, { mime: 'image/png', data: 'no es base64!' }, { mime: 'image/png', data: '' }, { mime: 'image/png', data: 'A'.repeat(6000001) }]) {
+    assert.equal((await s.handleAsk(imgMsg({ image }), 1)).error.code, 'INVALID_INPUT');
+  }
+  const empty = svc(async () => geminiOk({ status: 'confirmed', answer_text: '' }));
+  assert.equal((await empty.handleAsk(imgMsg(), 1)).error.code, 'EMPTY_RESPONSE');
+});
+
+const docsCfg = (over) => ({ ...settings, docs: { enabled: true, k: 3, imageSearch: true, ...over } });
+test('imagen + PDF: transcribe la pregunta y busca en local; devuelve fragmentos redactados; solo si está activado', async () => {
+  let sent;
+  const docs = { search: async (q, o) => { assert.equal(q, 'Ordena DHCP'); assert.equal(o.k, 3); return [{ id: 5, page: 1, text: 'DISCOVER mail ana@x.es' }]; } };
+  const make = (cfg, fetchImpl) => createAskService({ getConfig: async () => ({ apiKey: 'FAKE_KEY_FOR_TESTS_0123456789', settings: cfg }), gemini, fetchImpl, docs, nonce: () => 'abc123' });
+  const s = make(docsCfg(), async (u, init) => { sent = JSON.parse(init.body); return geminiOk('Ordena DHCP'); });
+  const r = await s.handleImageRead({ requestId: 'r1', image: IMG }, 1);
+  assert.equal(r.ok, true);
+  assert.equal(r.text, 'Ordena DHCP');
+  assert.deepEqual(r.hits, [{ id: 5, page: 1, text: 'DISCOVER mail [EMAIL]' }]);
+  assert.ok(sent.contents[0].parts[0].inlineData && !sent.generationConfig.responseSchema);
+  // desactivado: ni siquiera se llama a Gemini
+  const off = make(docsCfg({ imageSearch: false }), async () => assert.fail('no debe llamar'));
+  assert.deepEqual((await off.handleImageRead({ requestId: 'r1', image: IMG }, 1)).hits, []);
+  assert.equal(s._active.size, 0);
+});

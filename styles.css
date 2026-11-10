@@ -31,15 +31,24 @@ button.primary { background: var(--aqua); border-color: var(--aqua); color: var(
 button.primary:hover:not(:disabled) { background: var(--aqua-dark); }
 button.icon { border: 0; background: transparent; padding: 0 3px; font-size: 1.15em; }
 button.small { padding: 0 6px; font-size: .95em; align-self: flex-start; }
-/* Copiar: símbolo pequeño en la esquina de la respuesta */
-.answer, .cmd { position: relative; }
-.answer .atext { padding-right: 16px; }
-button.copy { position: absolute; top: 0; right: 0; border: 0; background: transparent; color: var(--muted); padding: 0 3px; font-size: 1em; line-height: 1.2; }
-button.copy:hover { color: var(--fg); }
-.cmd .code { padding-right: 16px; }
+/* Respuestas de texto: líneas pequeñas (solo para ver cuánto hay); un clic en una línea la copia */
+button.line { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 1px 2px; border-radius: 3px; font-size: .8em; line-height: 1.3; color: var(--fg); white-space: pre-wrap; word-break: break-word; }
+button.line:hover:not(:disabled) { background: rgba(127, 127, 127, .16); }
+button.line.cmd { font-family: ui-monospace, "DejaVu Sans Mono", monospace; }
+button.line.copied { opacity: .4; }
+button.line.copyfail { text-decoration: line-through; }
+.result.text { max-height: 220px; overflow: auto; gap: 2px; }
+/* Imagen: hueco para pegar (la imagen no se muestra) */
+.imgbox { display: flex; flex-direction: column; gap: 2px; }
+textarea.paste { width: 100%; height: 1.9em; min-height: 0; resize: none; overflow: hidden; font: inherit; font-size: .9em; color: var(--fg); background: transparent; border: 1px dashed var(--line); border-radius: 6px; padding: 3px 6px; caret-color: transparent; cursor: pointer; }
+textarea.paste::placeholder { color: var(--muted); opacity: 1; }
+.imgstatus { font-size: .9em; color: var(--muted); }
+.sub { padding-left: 14px; }
 .row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
 .controls button { flex: 1; }
 .modes { gap: 8px; }
+.seg span { white-space: nowrap; }
+:host([data-size="xxs"]) .modes { gap: 5px; }
 .seg { display: flex; gap: 3px; align-items: center; cursor: pointer; }
 .seg input { margin: 0; appearance: none; -webkit-appearance: none; width: .8em; height: .8em; border: 1px solid var(--fg); border-radius: 50%; background: transparent; cursor: pointer; }
 .seg input:checked { background: var(--fg); } /* el círculo del selector: literalmente del color del texto */
@@ -54,8 +63,6 @@ button.copy:hover { color: var(--fg); }
 .letters { font-size: 1em; font-weight: 500; letter-spacing: 0; color: var(--fg); line-height: 1.2; } /* resultado Quiz: pequeño y discreto */
 .result.quiz { border-top: 0; padding-top: 0; gap: 2px; }
 .tag { font-size: .9em; color: #8a5a00; }
-.atext { white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
-.code { margin: 0 0 3px; padding: 3px 5px; overflow: auto; white-space: pre-wrap; word-break: break-all; font: .95em/1.35 ui-monospace, "DejaVu Sans Mono", monospace; background: var(--aqua-soft); border-radius: 5px; }
 .caveat { font-size: .9em; color: var(--muted); margin: 0; }
 .sr { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 /* Fondo transparente (por defecto): sin relleno de ningún color. El texto se ve nítido (sin halo ni desenfoque)
@@ -67,7 +74,7 @@ button.copy:hover { color: var(--fg); }
 }
 :host([data-bg="transparent"]) button.primary { background: transparent; color: var(--aqua-dark); }
 :host([data-bg="transparent"]) .notice.warn { background: transparent; }
-:host([data-bg="transparent"]) .qbtn, :host([data-bg="transparent"]) .code { background: transparent; }
+:host([data-bg="transparent"]) .qbtn { background: transparent; }
 /* Paletas de color. «Clásica» = colores aqua de siempre (sin reglas extra).
    «Clara»: texto gris oscuro, discreto pero legible. «Oscura»: texto gris claro, discreto pero legible.
    En modo fondo transparente solo cambia el color del texto y de los bordes; con fondo sólido también el relleno. */
@@ -88,9 +95,3 @@ button.copy:hover { color: var(--fg); }
 :host([data-size="xxs"]) .letters { font-size: .95em; }
 :host([data-size="xxs"]) .controls button { padding: 1px 4px; }
 @media (prefers-reduced-motion: no-preference) { .panel { transition: opacity .12s; } }
-
-/* Modo ultra pequeño, respuestas cortas/largas: no se muestra el texto, solo los botones de copiar (el texto sigue ahí para copiarlo) */
-:host([data-size="xxs"]) .result.long { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 3px; }
-:host([data-size="xxs"]) .result.long .atext, :host([data-size="xxs"]) .result.long .code, :host([data-size="xxs"]) .result.long .caveat, :host([data-size="xxs"]) .result.long .tag { display: none; }
-:host([data-size="xxs"]) .result.long .answer, :host([data-size="xxs"]) .result.long .cmd { position: static; }
-:host([data-size="xxs"]) .result.long button.copy { position: static; border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; }

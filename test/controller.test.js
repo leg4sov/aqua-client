@@ -9,7 +9,7 @@ const CSS = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
 const OK_STATE = { ok: true, lang: 'es', hasKey: true, maxChars: 6000, prefs: { mode: 'quiz' }, ui: { size: 'xs', opacity: 40, side: 'right' } };
 const answer = (over) => ({ ok: true, requestId: 'x', result: { status: 'confirmed', module: 'Servicios de Red e Internet', selected: [2], answerText: '443', explanation: 'HTTPS usa TCP/443.', commands: [], caveats: '', warnings: [], ...over }, redactions: 0 });
 
-function setup({ html = MOODLE_QUIZ_HTML, url, handler, state } = {}) {
+function setup({ html = MOODLE_QUIZ_HTML, url, handler, state, prepareImage } = {}) {
   const dom = makeDom(html, url);
   const calls = [];
   const send = async (msg) => {
@@ -18,7 +18,7 @@ function setup({ html = MOODLE_QUIZ_HTML, url, handler, state } = {}) {
     if (handler) return handler(msg);
     return { ok: true };
   };
-  const c = createController({ window: dom.window, document: dom.window.document, send, openSettings: () => calls.push({ type: 'settings' }) });
+  const c = createController({ window: dom.window, document: dom.window.document, send, prepareImage, openSettings: () => calls.push({ type: 'settings' }) });
   const root = () => dom.window.document.getElementById('aqua-host').shadowRoot;
   const text = (sel) => (root().querySelector(sel) || {}).textContent;
   return { dom, c, calls, root, text, doc: dom.window.document };
@@ -31,6 +31,7 @@ function selectAndSetLong(t) {
   t.dom.window.getSelection().removeAllRanges();
   t.dom.window.getSelection().addRange(range);
   button(t.root(), 'Selección').click();
+  t.root().querySelector('input[value="text"]').click();
   t.root().querySelector('input[value="long"]').click();
 }
 
@@ -77,7 +78,7 @@ test('el panel usa textContent: el contenido de la IA no se interpreta como HTML
   button(t.root(), 'Consultar').click();
   await settle();
   assert.equal(t.root().querySelectorAll('.result img, .result b').length, 0);
-  assert.ok(t.text('.atext').includes('<img'));
+  assert.ok(t.text('button.line').includes('<img'));
   assert.equal(t.dom.window.pwned, undefined);
 });
 
@@ -103,7 +104,7 @@ test('modo Largas: envía la selección, muestra la respuesta y el estado comple
   button(t.root(), 'Consultar').click();
   await settle();
   assert.equal(t.text('.badge'), 'Completado');
-  assert.equal(t.text('.atext'), 'ip a muestra las direcciones.');
+  assert.equal(t.text('button.line'), 'ip a muestra las direcciones.');
   const ask = t.calls.find((m) => m.type === 'AQUA_ASK');
   assert.equal(ask.mode, 'long');
 });
@@ -119,7 +120,7 @@ test('modo Quiz con texto libre (sin opciones) avisa y no envía nada', async ()
   assert.equal(t.root().querySelector('input[value="quiz"]').checked, true);
   button(t.root(), 'Consultar').click();
   await settle();
-  assert.ok(t.text('.notice').includes('Larga') && t.text('.notice').includes('Quiz'));
+  assert.ok(t.text('.notice').includes('Texto') && t.text('.notice').includes('Quiz'));
   assert.equal(t.calls.filter((m) => m.type === 'AQUA_ASK').length, 0);
 });
 
@@ -132,7 +133,7 @@ test('modo Quiz: pregunta de opción múltiple muestra SOLO la letra (y el modo 
   button(t.root(), 'Consultar').click();
   await settle();
   assert.equal(t.text('.letters'), '1) B'); // número de la pregunta y letra
-  assert.equal(t.root().querySelector('.result .atext, .result details'), null);
+  assert.equal(t.root().querySelector('.result button.line, .result details'), null);
   assert.equal(ask_mode(t), 'quiz');
   const ask = t.calls.find((m) => m.type === 'AQUA_ASK');
   assert.deepEqual(ask.meta, { type: 'single', optionCount: 3 });
@@ -207,35 +208,34 @@ test('ocultar el panel cancela la solicitud en curso', async () => {
   assert.ok(t.calls.some((m) => m.type === 'AQUA_CANCEL'));
 });
 
-const copyBtn = (root) => root.querySelector('button.copy');
+const lines = (root) => [...root.querySelectorAll('.result button.line')];
 
-test('copia al portapapeles con un botón-símbolo pequeño (API moderna) y copia de reserva', async () => {
-  const t = setup({ handler: (m) => (m.type === 'AQUA_ASK' ? answer({ selected: [], answerText: 'ip a' }) : { ok: true }) });
-  let copied;
-  Object.defineProperty(t.dom.window.navigator, 'clipboard', { value: { writeText: async (s) => { copied = s; } }, configurable: true });
+test('respuesta de texto: líneas pequeñas; un clic copia solo esa línea y la atenúa; no hay botón de copiar', async () => {
+  const t = setup({ handler: (m) => (m.type === 'AQUA_ASK' ? answer({ selected: [], answerText: 'primera\n\nsegunda línea' }) : { ok: true }) });
+  const copied = [];
+  Object.defineProperty(t.dom.window.navigator, 'clipboard', { value: { writeText: async (s) => { copied.push(s); } }, configurable: true });
   await t.c.show(CSS);
   selectAndSetLong(t);
   button(t.root(), 'Consultar').click();
   await settle();
-  const b = copyBtn(t.root());
-  assert.equal(b.textContent, '⧉'); // solo un símbolo
-  assert.equal(b.getAttribute('aria-label'), 'Copiar'); // accesible
-  assert.equal(b.title, 'Copiar');
-  b.click();
+  assert.equal(t.root().querySelector('button.copy'), null);
+  assert.deepEqual(lines(t.root()).map((b) => b.textContent), ['primera', 'segunda línea']); // varios textos = varias líneas
+  lines(t.root())[1].click();
   await settle();
-  assert.equal(copied, 'ip a');
-  assert.equal(copyBtn(t.root()).textContent, '✓');
+  assert.deepEqual(copied, ['segunda línea']);
+  assert.ok(lines(t.root())[1].classList.contains('copied'));
+  assert.ok(!lines(t.root())[0].classList.contains('copied'));
 
   // reserva: writeText falla -> execCommand('copy')
   Object.defineProperty(t.dom.window.navigator, 'clipboard', { value: { writeText: async () => { throw new Error('denegado'); } }, configurable: true });
   let used = false;
   t.doc.execCommand = (cmd) => { used = cmd === 'copy'; return true; };
-  copyBtn(t.root()).click();
+  lines(t.root())[0].click();
   await settle();
   assert.equal(used, true);
 });
 
-test('modos Corta y Larga: respuesta de texto con botón de copiar; Quiz no lo tiene', async () => {
+test('Texto corto o largo: se envía el modo elegido; Quiz no tiene líneas copiables', async () => {
   for (const mode of ['short', 'long']) {
     const t = setup({ handler: (m) => (m.type === 'AQUA_ASK' ? answer({ selected: [], answerText: 'respuesta escrita' }) : { ok: true }) });
     await t.c.show(CSS);
@@ -244,28 +244,130 @@ test('modos Corta y Larga: respuesta de texto con botón de copiar; Quiz no lo t
     button(t.root(), 'Consultar').click();
     await settle();
     assert.equal(t.calls.find((m) => m.type === 'AQUA_ASK').mode, mode);
-    assert.equal(t.text('.atext'), 'respuesta escrita');
-    assert.ok(copyBtn(t.root()));
+    assert.equal(lines(t.root()).length, 1);
   }
   const q = setup({ handler: (m) => (m.type === 'AQUA_ASK' ? answer() : { ok: true }) });
   await q.c.show(CSS);
   await pickFirstQuestion(q);
   button(q.root(), 'Consultar').click();
   await settle();
-  assert.equal(copyBtn(q.root()), null);
+  assert.equal(lines(q.root()).length, 0);
 });
 
-test('hay tres modos (Quiz, Corta, Larga) y las preguntas abiertas sugieren Corta o Larga según el tipo', async () => {
+test('hay tres modos (Quiz, Texto, Imagen); corta/larga solo se ve dentro de Texto y las preguntas abiertas sugieren una', async () => {
   const t = setup();
   await t.c.show(CSS);
-  assert.deepEqual([...t.root().querySelectorAll('.seg input')].map((i) => i.value), ['quiz', 'short', 'long']);
-  assert.deepEqual([...t.root().querySelectorAll('.seg span')].map((i) => i.textContent), ['Quiz', 'Corta', 'Larga']);
+  const main = () => [...t.root().querySelectorAll('.modes:not(.sub) .seg')];
+  assert.deepEqual(main().map((l) => l.querySelector('input').value), ['quiz', 'text', 'image']);
+  assert.deepEqual(main().map((l) => l.querySelector('span').textContent), ['Quiz', 'Texto', 'Imagen']);
+  const sub = t.root().querySelector('.sub');
+  assert.equal(sub.hidden, true); // en Quiz no hay selector corta/larga
+  assert.deepEqual([...sub.querySelectorAll('span')].map((x) => x.textContent), ['Corta', 'Larga']);
   button(t.root(), 'Preguntas').click();
   const btns = t.root().querySelectorAll('.qbtn');
   btns[0].click();
   assert.equal(t.root().querySelector('input[value="quiz"]').checked, true); // opción única
+  assert.equal(sub.hidden, true);
   btns[2].click();
+  assert.equal(t.root().querySelector('input[value="text"]').checked, true); // pregunta abierta -> Texto
   assert.equal(t.root().querySelector('input[value="short"]').checked, true); // respuesta corta
+  assert.equal(sub.hidden, false);
+});
+
+// ---- Modo Imagen
+const PNG = { type: 'image/png', size: 10 };
+function paste(t, items) {
+  const box = t.root().querySelector('textarea.paste');
+  const ev = new t.dom.window.Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'clipboardData', { value: { items, files: [] } });
+  box.dispatchEvent(ev);
+  return ev;
+}
+const imgItem = () => ({ kind: 'file', type: 'image/png', getAsFile: () => PNG });
+
+test('modo Imagen: se pega con Ctrl+V, no se muestra, sale un aviso breve y se envía a Gemini (respuesta breve, líneas copiables)', async () => {
+  const t = setup({
+    prepareImage: async (f) => { assert.equal(f, PNG); return { mime: 'image/jpeg', data: 'QUJD' }; },
+    handler: (m) => (m.type === 'AQUA_ASK' ? answer({ selected: [], answerText: '1) puerto\n2) servidor' }) : { ok: true }),
+  });
+  await t.c.show(CSS);
+  const imgbox = t.root().querySelector('.imgbox');
+  assert.equal(imgbox.hidden, true);
+  t.root().querySelector('input[value="image"]').click();
+  assert.equal(imgbox.hidden, false);
+  assert.equal(t.root().querySelector('.controls').hidden, true); // sin Selección/Preguntas en este modo
+  // sin imagen todavía: avisa y no envía
+  button(t.root(), 'Consultar').click();
+  await settle();
+  assert.ok(t.text('.notice').includes('Pega primero'));
+  assert.equal(t.calls.filter((m) => m.type === 'AQUA_ASK').length, 0);
+
+  const ev = paste(t, [imgItem()]);
+  assert.equal(ev.defaultPrevented, true);
+  await settle();
+  assert.equal(t.text('.imgstatus'), 'Imagen cargada · se enviará');
+  assert.equal(t.root().querySelectorAll('img').length, 0); // la imagen no se enseña
+  button(t.root(), 'Consultar').click();
+  await settle();
+  const ask = t.calls.find((m) => m.type === 'AQUA_ASK');
+  assert.equal(ask.mode, 'image');
+  assert.deepEqual(ask.image, { mime: 'image/jpeg', data: 'QUJD' });
+  assert.equal(ask.text, '');
+  assert.deepEqual(lines(t.root()).map((b) => b.textContent), ['1) puerto', '2) servidor']);
+  assert.equal(t.root().querySelector('.imgstatus').hidden, true); // la imagen enviada se descarta
+  button(t.root(), 'Consultar').click(); // no reenvía una imagen vieja
+  await settle();
+  assert.equal(t.calls.filter((m) => m.type === 'AQUA_ASK').length, 1);
+});
+
+test('modo Imagen: portapapeles sin imagen o imagen inservible avisan y no envían', async () => {
+  const t = setup({ prepareImage: async () => { const e = new Error('x'); e.code = 'IMAGE_INVALID'; throw e; }, handler: (m) => (m.type === 'AQUA_ASK' ? assert.fail('no debe enviar') : { ok: true }) });
+  await t.c.show(CSS);
+  t.root().querySelector('input[value="image"]').click();
+  paste(t, [{ kind: 'string', type: 'text/plain', getAsFile: () => null }]);
+  await settle();
+  assert.ok(t.text('.notice').includes('No hay ninguna imagen'));
+  paste(t, [imgItem()]);
+  await settle();
+  assert.ok(t.text('.notice').includes('No se pudo usar la imagen'));
+  assert.equal(t.root().querySelector('.imgstatus').hidden, true);
+  button(t.root(), 'Consultar').click();
+  await settle();
+  assert.equal(t.calls.filter((m) => m.type === 'AQUA_ASK').length, 0);
+});
+
+test('modo Imagen + PDF: con «PDF + imagen» primero se lee la pregunta (AQUA_IMG_READ) y los fragmentos viajan con la imagen', async () => {
+  const t = setup({
+    state: { docs: { enabled: true, k: 4, imageSearch: true } },
+    prepareImage: async () => ({ mime: 'image/jpeg', data: 'QUJD' }),
+    handler: (m) => {
+      if (m.type === 'AQUA_IMG_READ') return { ok: true, text: 'Ordena los pasos de DHCP', hits: [{ id: 7, page: 2, text: 'DISCOVER OFFER REQUEST ACK' }] };
+      if (m.type === 'AQUA_ASK') return answer({ selected: [], answerText: 'D, O, R, A' });
+      return { ok: true };
+    },
+  });
+  await t.c.show(CSS);
+  t.root().querySelector('input[value="image"]').click();
+  paste(t, [imgItem()]);
+  await settle();
+  button(t.root(), 'Consultar').click();
+  await settle();
+  const types = t.calls.map((m) => m.type).filter((x) => x === 'AQUA_IMG_READ' || x === 'AQUA_ASK');
+  assert.deepEqual(types, ['AQUA_IMG_READ', 'AQUA_ASK']);
+  assert.deepEqual(t.calls.find((m) => m.type === 'AQUA_ASK').refIds, [7]);
+  assert.ok(t.text('.preview').includes('Ordena los pasos') && t.text('.preview').includes('DISCOVER'));
+  assert.equal(lines(t.root())[0].textContent, 'D, O, R, A');
+});
+
+test('modo Imagen sin «PDF + imagen»: una sola petición', async () => {
+  const t = setup({ state: { docs: { enabled: true, k: 4, imageSearch: false } }, prepareImage: async () => ({ mime: 'image/jpeg', data: 'QUJD' }), handler: (m) => (m.type === 'AQUA_ASK' ? answer({ selected: [], answerText: 'x' }) : { ok: true }) });
+  await t.c.show(CSS);
+  t.root().querySelector('input[value="image"]').click();
+  paste(t, [imgItem()]);
+  await settle();
+  button(t.root(), 'Consultar').click();
+  await settle();
+  assert.equal(t.calls.filter((m) => m.type === 'AQUA_IMG_READ').length, 0);
 });
 
 test('sin clave API: avisa y no envía', async () => {

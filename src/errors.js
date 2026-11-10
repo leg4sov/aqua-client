@@ -5,7 +5,7 @@
 
   const isNode = typeof module === 'object';
   const i18n = isNode ? require('./i18n') : A.i18n;
-  const CODES = ['NO_API_KEY', 'EMPTY_TEXT', 'TOO_LONG', 'INVALID_INPUT', 'NETWORK', 'TIMEOUT', 'CANCELLED', 'AUTH', 'QUOTA', 'MODEL_NOT_FOUND', 'SERVER', 'BAD_REQUEST', 'BLOCKED', 'EMPTY_RESPONSE', 'TRUNCATED', 'INVALID_RESPONSE', 'MODE_MISMATCH', 'NOT_PDF', 'PDF_INVALID', 'PDF_ENCRYPTED', 'PDF_NO_TEXT', 'PDF_TOO_BIG', 'DOCS_LIMIT', 'NOT_MOODLE', 'FORBIDDEN_SENDER', 'UNKNOWN'];
+  const CODES = ['NO_API_KEY', 'EMPTY_TEXT', 'TOO_LONG', 'INVALID_INPUT', 'NETWORK', 'TIMEOUT', 'CANCELLED', 'AUTH', 'QUOTA', 'MODEL_NOT_FOUND', 'SERVER', 'BAD_REQUEST', 'BLOCKED', 'EMPTY_RESPONSE', 'TRUNCATED', 'INVALID_RESPONSE', 'MODE_MISMATCH', 'NOT_PDF', 'PDF_INVALID', 'PDF_ENCRYPTED', 'PDF_NO_TEXT', 'PDF_TOO_BIG', 'DOCS_LIMIT', 'IMAGE_INVALID', 'NOT_MOODLE', 'FORBIDDEN_SENDER', 'UNKNOWN'];
   // Mensaje de usuario en el idioma pedido (inglés por defecto).
   function messageFor(code, lang) {
     return i18n.t(lang, `err.${CODES.includes(code) ? code : 'UNKNOWN'}`);

@@ -52,7 +52,7 @@ test('listas de archivos inyectados existen y cubren las dependencias del conten
   const bg = read('background.js');
   const files = [...bg.match(/const CONTENT_FILES = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
   for (const f of files) assert.ok(exists(f), `falta ${f}`);
-  for (const dep of ['src/moodleDetector.js', 'src/questionExtractor.js', 'src/ui.js', 'src/controller.js', 'src/textNormalizer.js', 'src/errors.js']) {
+  for (const dep of ['src/moodleDetector.js', 'src/questionExtractor.js', 'src/imageUtil.js', 'src/ui.js', 'src/controller.js', 'src/textNormalizer.js', 'src/errors.js']) {
     assert.ok(files.includes(dep), dep);
   }
   assert.equal(files.at(-1), 'content.js');
@@ -267,8 +267,10 @@ test('atajos por defecto de posición: Ctrl+Alt+, (izquierda) y Ctrl+Alt+. (dere
 
 test('PDF de referencia: desactivado por defecto, k entre 1 y 8, solo true activa', () => {
   const { sanitizeDocs, sanitizeSettings } = require('../src/settings');
-  assert.deepEqual({ ...sanitizeDocs(undefined) }, { enabled: false, k: 4 });
-  assert.deepEqual({ ...sanitizeSettings({}).docs }, { enabled: false, k: 4 });
+  assert.deepEqual({ ...sanitizeDocs(undefined) }, { enabled: false, k: 4, imageSearch: false });
+  assert.deepEqual({ ...sanitizeSettings({}).docs }, { enabled: false, k: 4, imageSearch: false });
+  assert.equal(sanitizeDocs({ imageSearch: 'yes' }).imageSearch, false);
+  assert.equal(sanitizeDocs({ imageSearch: true }).imageSearch, true);
   assert.equal(sanitizeDocs({ enabled: 'yes' }).enabled, false);
   assert.equal(sanitizeDocs({ enabled: true }).enabled, true);
   assert.equal(sanitizeDocs({ k: 0 }).k, 1);
@@ -343,9 +345,21 @@ test('Ajustes: todos los id que usa options.js existen en options.html y hay una
   assert.ok(!/prefers-color-scheme:\s*dark/.test(read('options.css'))); // colores de Moodle: siempre claro
 });
 
-test('modo ultra: en respuestas cortas/largas el CSS oculta el texto y deja solo el botón de copiar', () => {
+test('respuestas de texto: líneas pequeñas y clicables también en modo ultra (el CSS ya no esconde el texto)', () => {
   const css = read('styles.css');
-  assert.ok(/:host\(\[data-size="xxs"\]\) \.result\.long \.atext[^{]*\.code[^{]*\{\s*display:\s*none/.test(css));
-  assert.ok(/:host\(\[data-size="xxs"\]\) \.result\.long button\.copy\s*\{\s*position:\s*static/.test(css));
-  assert.ok(/classList\.toggle\('long'/.test(read('src/ui.js')));
+  assert.ok(/button\.line\s*\{[^}]*font-size:\s*\.8em/.test(css)); // más pequeño que lo normal
+  assert.ok(!/\.result\.long/.test(css) && !/button\.copy/.test(css));
+  assert.ok(/classList\.toggle\('text'/.test(read('src/ui.js')));
+});
+
+test('imagen: fitSize reduce sin ampliar nunca; geminiClient pone la imagen antes del texto', () => {
+  const { fitSize, MAX_SIDE } = require('../src/imageUtil');
+  assert.deepEqual(fitSize(3136, 1568, MAX_SIDE), { w: 1568, h: 784 });
+  assert.deepEqual(fitSize(800, 600, MAX_SIDE), { w: 800, h: 600 });
+  assert.deepEqual(fitSize(0, 10, MAX_SIDE), { w: 0, h: 0 });
+  const g = require('../src/geminiClient');
+  const body = g.buildRequestBody({ userText: 'hola', image: { mime: 'image/png', data: 'QQ==' } });
+  assert.deepEqual(body.contents[0].parts.map((p) => Object.keys(p)[0]), ['inlineData', 'text']);
+  assert.equal(g.buildRequestBody({ userText: 'hola' }).contents[0].parts.length, 1);
+  assert.ok(read('background.js').includes("'src/imageUtil.js'") && read('background.js').includes("case 'AQUA_IMG_READ'"));
 });

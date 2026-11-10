@@ -15,7 +15,7 @@
     timeoutMs: 30000,
     maxChars: norm.DEFAULT_MAX_CHARS,
   });
-  const MODES = ['quiz', 'short', 'long']; // quiz = solo letras; short = respuesta corta; long = respuesta larga
+  const MODES = ['quiz', 'short', 'long', 'image']; // quiz = solo letras; short/long = texto corto o largo; image = pregunta en una imagen pegada
   const DEFAULT_PREFS = Object.freeze({ mode: 'quiz' });
   const DEFAULT_UI = Object.freeze({ size: 'xxs', opacity: 55, side: 'left', bg: 'transparent', palette: 'dark', hoverOnly: false });
   // Color de texto de cada paleta (debe coincidir con styles.css; hay un test que lo comprueba).
@@ -57,11 +57,12 @@
   }
 
   // PDF de referencia: desactivado por defecto (envía fragmentos a Google y gasta más tokens).
-  const DEFAULT_DOCS = Object.freeze({ enabled: false, k: 4 });
+  const DEFAULT_DOCS = Object.freeze({ enabled: false, k: 4, imageSearch: false });
   function sanitizeDocs(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
     const k = Number(r.k);
-    return { enabled: r.enabled === true, k: Number.isFinite(k) ? Math.min(8, Math.max(1, Math.round(k))) : DEFAULT_DOCS.k };
+    // imageSearch: con una imagen, Gemini la lee primero (1 petición extra) para buscar en los PDF; solo tiene efecto si enabled
+    return { enabled: r.enabled === true, k: Number.isFinite(k) ? Math.min(8, Math.max(1, Math.round(k))) : DEFAULT_DOCS.k, imageSearch: r.imageSearch === true };
   }
 
   function sanitizeSettings(raw) {

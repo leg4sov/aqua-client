@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "0.8.11",
+  "version": "0.9.0",
   "minimum_chrome_version": "102",
   "icons": {
     "16": "icons/icon16.png",

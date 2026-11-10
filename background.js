@@ -23,6 +23,7 @@ const CONTENT_FILES = [
   'src/textNormalizer.js',
   'src/moodleDetector.js',
   'src/questionExtractor.js',
+  'src/imageUtil.js',
   'src/ui.js',
   'src/controller.js',
   'content.js',
@@ -150,6 +151,9 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       case 'AQUA_ASK':
         if (tabId === undefined) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
         return service.handleAsk(msg, tabId);
+      case 'AQUA_IMG_READ':
+        if (tabId === undefined) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
+        return service.handleImageRead(msg, tabId);
       case 'AQUA_CANCEL':
         if (tabId !== undefined && typeof msg.requestId === 'string') service.cancel(tabId, msg.requestId);
         return { ok: true };

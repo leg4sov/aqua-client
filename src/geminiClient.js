@@ -16,13 +16,14 @@
     return `${API_BASE}/models/${m}:generateContent`;
   }
 
-  function buildRequestBody({ systemPrompt, userText, responseSchema, maxOutputTokens }) {
+  function buildRequestBody({ systemPrompt, userText, responseSchema, maxOutputTokens, image }) {
     const generationConfig = { temperature: 0.2, maxOutputTokens: maxOutputTokens || 4096 };
     if (responseSchema) {
       generationConfig.responseMimeType = 'application/json';
       generationConfig.responseSchema = responseSchema;
     }
-    const body = { contents: [{ role: 'user', parts: [{ text: userText }] }], generationConfig };
+    const parts = image && image.data ? [{ inlineData: { mimeType: image.mime, data: image.data } }, { text: userText }] : [{ text: userText }]; // la imagen va antes del texto
+    const body = { contents: [{ role: 'user', parts }], generationConfig };
     if (systemPrompt) body.systemInstruction = { parts: [{ text: systemPrompt }] };
     return body;
   }

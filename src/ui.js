@@ -74,22 +74,59 @@
     body.appendChild(sent);
 
     const modes = el('div', 'row modes');
-    const mkRadio = (value, label, checked) => {
+    const mkRadio = (name, value, label, checked, onChange) => {
       const l = el('label', 'seg');
       const r = doc.createElement('input');
       r.type = 'radio';
-      r.name = 'aqua-mode';
+      r.name = name;
       r.value = value;
       r.checked = checked;
-      r.addEventListener('change', () => h.onModeChange(value));
+      r.addEventListener('change', onChange);
       l.append(r, el('span', null, label));
       return { l, r };
     };
-    const rq = mkRadio('quiz', T('ui.quiz'), true);
-    const rs = mkRadio('short', T('ui.short'), false);
-    const rl = mkRadio('long', T('ui.long'), false);
-    modes.append(rq.l, rs.l, rl.l);
+    const onMode = () => {
+      updateModeUi();
+      h.onModeChange(api.getMode());
+      if (api.getMode() === 'image') pasteBox.focus({ preventScroll: true });
+    };
+    const rq = mkRadio('aqua-mode', 'quiz', T('ui.quiz'), true, onMode);
+    const rt = mkRadio('aqua-mode', 'text', T('ui.text'), false, onMode);
+    const ri = mkRadio('aqua-mode', 'image', T('ui.image'), false, onMode);
+    modes.append(rq.l, rt.l, ri.l);
     body.appendChild(modes);
+
+    // Texto: corta o larga (solo se ve con «Texto» elegido, para ahorrar espacio)
+    const sub = el('div', 'row modes sub');
+    sub.hidden = true;
+    const rs = mkRadio('aqua-len', 'short', T('ui.short'), true, () => h.onModeChange(api.getMode()));
+    const rl = mkRadio('aqua-len', 'long', T('ui.long'), false, () => h.onModeChange(api.getMode()));
+    sub.append(rs.l, rl.l);
+    body.appendChild(sub);
+
+    // Imagen: hueco para pegar con Ctrl+V. La imagen no se muestra; solo un aviso breve de que está cargada.
+    const imgbox = el('div', 'imgbox');
+    imgbox.hidden = true;
+    const pasteBox = doc.createElement('textarea');
+    pasteBox.className = 'paste';
+    pasteBox.rows = 1;
+    pasteBox.spellcheck = false;
+    pasteBox.placeholder = T('ui.pasteHint');
+    pasteBox.setAttribute('aria-label', T('ui.pasteHint'));
+    pasteBox.addEventListener('input', () => (pasteBox.value = '')); // nunca guarda texto escrito
+    pasteBox.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const cd = e.clipboardData;
+      const items = cd && cd.items ? [...cd.items] : [];
+      const it = items.find((x) => x.kind === 'file' && /^image\//.test(x.type));
+      const file = it ? it.getAsFile() : (cd && cd.files && [...cd.files].find((f) => /^image\//.test(f.type))) || null;
+      h.onPasteImage(file || null);
+    });
+    const imgStatus = el('div', 'imgstatus');
+    imgStatus.hidden = true;
+    imgStatus.setAttribute('role', 'status');
+    imgbox.append(pasteBox, imgStatus);
+    body.appendChild(imgbox);
 
     const actions = el('div', 'row actions');
     const bAsk = btn(T('ui.ask'), 'primary', () => h.onAsk());
@@ -110,22 +147,6 @@
     fallbackArea.setAttribute('aria-hidden', 'true');
     fallbackArea.tabIndex = -1;
     root.appendChild(fallbackArea);
-
-    // Botón de copiar: solo un símbolo pequeño (⧉), que pasa a ✓ al copiar.
-    function copyButton(getText) {
-      const b = btn('⧉', 'copy', async () => {
-        const ok = await h.onCopy(getText(), fallbackArea);
-        b.textContent = ok ? '✓' : '✕';
-        b.title = ok ? T('ui.copied') : T('ui.copyFail');
-        setTimeout(() => {
-          b.textContent = '⧉';
-          b.title = T('ui.copy');
-        }, 1800);
-      });
-      b.title = T('ui.copy');
-      b.setAttribute('aria-label', T('ui.copy'));
-      return b;
-    }
 
     // ---- Visibilidad: «invisible salvo con el ratón encima» y «desvanecer por inactividad» (combinables).
     // El panel nunca se cierra: solo cambia su opacidad. Invisible => no tapa clics de la página.
@@ -178,6 +199,18 @@
       hovered = false;
       host.style.opacity = '';
       host.style.pointerEvents = '';
+    }
+
+    // Qué se ve según el modo: sub-selector (Texto), hueco de pegado (Imagen); en Imagen no hay selección/preguntas.
+    let unsupported = false;
+    let qCount = 0;
+    function updateModeUi() {
+      const m = rq.r.checked ? 'quiz' : rt.r.checked ? 'text' : 'image';
+      modes.hidden = unsupported;
+      sub.hidden = unsupported || m !== 'text';
+      imgbox.hidden = unsupported || m !== 'image';
+      controls.hidden = unsupported || m === 'image';
+      qlist.hidden = unsupported || m === 'image' || !qCount;
     }
 
     const api = {
@@ -233,14 +266,27 @@
         notice.className = `notice ${kind || 'info'}`;
       },
       setUnsupported(on) {
-        controls.hidden = on;
-        modes.hidden = on;
+        unsupported = !!on;
         actions.hidden = on;
         if (on) sent.hidden = true;
+        updateModeUi();
       },
-      getMode: () => (rl.r.checked ? 'long' : rs.r.checked ? 'short' : 'quiz'),
+      /** 'quiz' | 'short' | 'long' | 'image' (Texto = corta o larga según el sub-selector) */
+      getMode: () => (rq.r.checked ? 'quiz' : ri.r.checked ? 'image' : rl.r.checked ? 'long' : 'short'),
       setMode(m) {
-        (m === 'long' ? rl.r : m === 'short' ? rs.r : rq.r).checked = true;
+        if (m === 'quiz') rq.r.checked = true;
+        else if (m === 'image') ri.r.checked = true;
+        else {
+          rt.r.checked = true;
+          (m === 'long' ? rl.r : rs.r).checked = true;
+        }
+        updateModeUi();
+      },
+      /** state: 'none' | 'loading' | 'ready' */
+      setImageState(state) {
+        const txt = state === 'ready' ? T('ui.imgReady') : state === 'loading' ? T('ui.imgLoading') : '';
+        imgStatus.textContent = txt;
+        imgStatus.hidden = !txt;
       },
       setBusy(busy) {
         bAsk.disabled = busy;
@@ -257,7 +303,8 @@
       },
       setQuestions(list) {
         qlist.replaceChildren();
-        qlist.hidden = !list.length;
+        qCount = list.length;
+        qlist.hidden = !list.length || ri.r.checked;
         list.forEach((q, i) => {
           const li = el('li');
           const full = q.text.replace(/\s+/g, ' ');
@@ -271,16 +318,16 @@
       clearResult() {
         result.replaceChildren();
         result.hidden = true;
-        result.classList.remove('quiz', 'long');
+        result.classList.remove('quiz', 'text');
       },
       /**
-       * view: {kind:'short', confidence, letters:[]} | {kind:'long', confidence, answerText, commands, caveats, warnings}
+       * view: {kind:"quiz", number, confidence, letters:[]} | {kind:"text", confidence, answerText, commands, caveats, warnings}
        */
       setResult(view) {
         result.replaceChildren();
         result.hidden = false;
         result.classList.toggle('quiz', view.kind === 'quiz'); // el resultado Quiz va sin línea ni relleno
-        result.classList.toggle('long', view.kind !== 'quiz'); // respuestas cortas/largas: en modo ultra solo se ve el botón de copiar
+        result.classList.toggle('text', view.kind !== 'quiz'); // respuestas de texto: líneas pequeñas, un clic copia la línea
         const tag = view.confidence === 'hypothesis' || view.confidence === 'insufficient_data' ? T(`conf.${view.confidence}`) : '';
         if (view.kind === 'quiz') {
           if (view.letters.length) {
@@ -293,16 +340,21 @@
           if (tag) result.appendChild(el('div', 'tag', tag));
         } else {
           if (tag) result.appendChild(el('div', 'tag', tag));
-          if (view.answerText) {
-            const box = el('div', 'answer');
-            box.append(el('div', 'atext', view.answerText), copyButton(() => view.answerText));
-            result.appendChild(box);
-          }
-          (view.commands || []).forEach((c) => {
-            const box = el('div', 'cmd');
-            box.append(el('pre', 'code', c.command), copyButton(() => c.command));
-            result.appendChild(box);
-          });
+          // Cada línea es un botón: un clic la copia (sin seleccionar) y se atenúa un instante.
+          const addLine = (txt, cls) => {
+            const b = btn(txt, cls ? `line ${cls}` : 'line', async () => {
+              const ok = await h.onCopy(txt, fallbackArea);
+              b.classList.add(ok ? 'copied' : 'copyfail');
+              setTimeout(() => b.classList.remove('copied', 'copyfail'), 1200);
+            });
+            result.appendChild(b);
+          };
+          String(view.answerText || '')
+            .split(/\n+/)
+            .map((x) => x.trim())
+            .filter(Boolean)
+            .forEach((x) => addLine(x));
+          (view.commands || []).forEach((c) => addLine(c.command, 'cmd'));
           if (view.caveats) result.appendChild(el('div', 'caveat', view.caveats));
           if (view.commands && view.commands.length) result.appendChild(el('div', 'caveat', T('ui.cmdWarn')));
         }
@@ -310,6 +362,7 @@
       },
     };
     api.applyAppearance(null);
+    updateModeUi();
     return api;
   }
 

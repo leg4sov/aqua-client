@@ -58,6 +58,8 @@ test('PDF en Ajustes: sin documentos, desactivado y sin aviso; al activarlo apar
   const o = await openOptions();
   assert.equal(o.$('docsEnabled').checked, false);
   assert.equal(o.$('docsWarn').hidden, true);
+  assert.equal(o.$('docsPrivate').hidden, true);
+  assert.equal(o.$('docsImage').disabled, true); // sin los PDF activos no se puede marcar
   assert.equal(o.$('docsNone').hidden, false);
   assert.equal(o.$('docsDeleteAll').hidden, true);
   assert.ok(o.$('docsNone').textContent.includes('No documents yet'));
@@ -67,6 +69,14 @@ test('PDF en Ajustes: sin documentos, desactivado y sin aviso; al activarlo apar
   assert.equal(o.store['aqua.settings'].docs.enabled, true);
   assert.equal(o.$('docsWarn').hidden, false);
   assert.ok(o.$('docsWarn').textContent.includes('1,500–3,000') && o.$('docsWarn').textContent.includes('sent to Google'));
+  // aviso de IndexedDB (modo privado / sin historial) al activar los PDF, y «PDF + imagen» solo con los PDF activos
+  assert.equal(o.$('docsPrivate').hidden, false);
+  assert.ok(/private windows/.test(o.$('docsPrivate').textContent) && /never remember history/.test(o.$('docsPrivate').textContent));
+  assert.equal(o.$('docsImage').disabled, false);
+  o.$('docsImage').checked = true;
+  o.$('docsImage').dispatchEvent(new o.w.Event('change'));
+  await waitFor(() => o.store['aqua.settings'].docs.imageSearch === true);
+  assert.equal(o.store['aqua.settings'].docs.imageSearch, true);
   o.$('docsK').value = '99';
   o.$('docsK').dispatchEvent(new o.w.Event('change'));
   await waitFor(() => o.store['aqua.settings'].docs.k === 8);

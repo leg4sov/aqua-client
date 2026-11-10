@@ -7,6 +7,7 @@
   const extractor = isNode ? require('./questionExtractor') : A.questionExtractor;
   const norm = isNode ? require('./textNormalizer') : A.textNormalizer;
   const ui = isNode ? require('./ui') : A.ui;
+  const imageUtil = isNode ? require('./imageUtil') : A.imageUtil;
   const errors = isNode ? require('./errors') : A.errors;
   const i18n = isNode ? require('./i18n') : A.i18n;
 
@@ -18,11 +19,12 @@
     const win = env.window;
     let panel = null;
     let page = null;
-    let state = { hasKey: false, maxChars: norm.DEFAULT_MAX_CHARS, ui: null, lang: i18n.DEFAULT_LANG, idle: { enabled: true, seconds: 5 }, docs: { enabled: false, k: 4 } };
+    let state = { hasKey: false, maxChars: norm.DEFAULT_MAX_CHARS, ui: null, lang: i18n.DEFAULT_LANG, idle: { enabled: true, seconds: 5 }, docs: { enabled: false, k: 4, imageSearch: false } };
     let panelLang = null;
     const T = (k, p) => i18n.t(state.lang, k, p);
     const msg = (code) => errors.messageFor(code, state.lang);
     let payload = null; // {text, meta, options}
+    let image = null; // imagen pegada (modo Imagen): {mime, data} ya reducida; solo en memoria
     let questions = [];
     let currentRequest = null;
     let seq = 0;
@@ -91,6 +93,23 @@
       return true;
     }
 
+    // Modo Imagen: la imagen se reduce aquí, se queda solo en memoria y no se muestra.
+    async function pasteImage(file) {
+      image = null;
+      panel.setImageState('none');
+      panel.clearResult();
+      if (!file) return panel.setNotice(T('ctl.noImage'), 'info');
+      panel.setNotice('', 'info');
+      panel.setImageState('loading');
+      try {
+        image = await (env.prepareImage || ((f) => imageUtil.prepare(f, win)))(file);
+        panel.setImageState('ready');
+      } catch (e) {
+        panel.setImageState('none');
+        fail(e && e.code ? e.code : 'IMAGE_INVALID');
+      }
+    }
+
     function useSelection() {
       const sel = win.getSelection ? win.getSelection().toString() : '';
       setPayload(sel, { type: 'free', optionCount: 0 }, [], `${T('ctl.selNote')}:`, undefined, sel);
@@ -125,7 +144,7 @@
       if (mode === 'quiz') {
         return { kind: 'quiz', number, confidence: r.status, letters: r.selected.map((n) => extractor.letter(n - 1)), warnings: shortWarnings(r.warnings) };
       }
-      return { kind: 'text', confidence: r.status, answerText: r.answerText, commands: r.commands, caveats: r.caveats, warnings: [] };
+      return { kind: 'text', confidence: r.status, answerText: r.answerText, commands: r.commands, caveats: r.caveats, warnings: [] }; // texto corto, largo o de imagen
     }
 
     function shortWarnings(ws) {
@@ -138,12 +157,16 @@
 
     async function ask() {
       if (currentRequest) return;
-      if (!payload) return fail('EMPTY_TEXT');
-      if (panel.getMode() === 'quiz' && payload.meta.optionCount === 0) return fail('MODE_MISMATCH');
+      const mode = panel.getMode();
+      if (mode === 'image') {
+        if (!image) return panel.setNotice(T('ctl.noImageYet'), 'warn');
+      } else {
+        if (!payload) return fail('EMPTY_TEXT');
+        if (mode === 'quiz' && payload.meta.optionCount === 0) return fail('MODE_MISMATCH');
+      }
       if (!state.hasKey) return fail('NO_API_KEY');
       const requestId = `r${Date.now().toString(36)}${++seq}`;
-      const mode = panel.getMode();
-      const cur = payload; // se fija ahora: si eliges otra pregunta mientras espera, no se mezclan
+      const cur = mode === 'image' ? { text: '', meta: { type: 'other', optionCount: 0 }, refs: [], image } : payload; // se fija ahora: si eliges otra pregunta mientras espera, no se mezclan
       const number = cur.number;
       currentRequest = requestId;
       panel.clearResult();
@@ -154,7 +177,17 @@
       try {
         if (cur.refsReady) await cur.refsReady; // la búsqueda local en PDF es casi instantánea
         if (currentRequest !== requestId) return;
-        res = await env.send({ type: 'AQUA_ASK', requestId, text: cur.text, meta: cur.meta, mode, refIds: (cur.refs || []).map((h) => h.id) });
+        if (mode === 'image' && state.docs && state.docs.enabled && state.docs.imageSearch) {
+          // Opcional: Gemini lee la pregunta de la imagen y se buscan fragmentos en los PDF del usuario. Si falla, se sigue sin PDF.
+          const rd = await env.send({ type: 'AQUA_IMG_READ', requestId, image: cur.image }).catch(() => null);
+          if (currentRequest !== requestId) return;
+          if (rd && !rd.ok && rd.error && rd.error.code === 'CANCELLED') res = rd;
+          else if (rd && rd.ok && Array.isArray(rd.hits) && rd.hits.length) {
+            cur.refs = rd.hits.slice(0, 8);
+            panel.setPreview(previewOf({ text: rd.text || '', refs: cur.refs }), T('ctl.imgNote'));
+          }
+        }
+        if (!res) res = await env.send({ type: 'AQUA_ASK', requestId, text: cur.text, meta: cur.meta, mode, image: mode === 'image' ? cur.image : undefined, refIds: (cur.refs || []).map((h) => h.id) });
       } catch (_) {
         res = { ok: false, error: { code: 'NETWORK' } };
       }
@@ -164,6 +197,10 @@
       if (res && res.ok) {
         try {
           panel.setResult(toView(res, mode, number));
+          if (mode === 'image') {
+            image = null; // para no reenviar por error una imagen antigua
+            panel.setImageState('none');
+          }
           setState('done');
           env.send({ type: 'AQUA_SET_PREFS', prefs: { mode } }).catch(() => {});
         } catch (_) {
@@ -202,6 +239,7 @@
       onHide: () => hide(),
       onSettings: () => env.openSettings(),
       onModeChange: () => {},
+      onPasteImage: (f) => pasteImage(f),
       t: (k, p) => T(k, p),
       onCopy: (t, area) => copy(t, area),
     };
@@ -231,6 +269,8 @@
       panel.applyAppearance(state.ui);
       panel.setVisibility({ hoverOnly: !!(state.ui && state.ui.hoverOnly), idle: state.idle });
       payload = null;
+      image = null;
+      panel.setImageState('none');
       questions = [];
       panel.setQuestions([]);
       panel.setPreview('');
