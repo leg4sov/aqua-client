@@ -58,6 +58,7 @@
                 <li><a href="#" data-tab-link="model" data-i18n="opt.modelHeading"></a></li>
                 <li><a href="#" data-tab-link="cust" data-i18n="opt.custHeading"></a></li>
                 <li><a href="#" data-tab-link="docs" data-i18n="opt.docsHeading"></a></li>
+                <li><a href="#" data-tab-link="web" data-i18n="opt.webHeading"></a></li>
                 <li><a href="#" data-tab-link="sc" data-i18n="opt.scHeading"></a></li>
                 <li><a href="#" data-tab-link="priv" data-i18n="opt.privHeading"></a></li>
                   </ul>
@@ -77,6 +78,7 @@
             <li role="presentation"><button type="button" class="tab" id="tab-model" role="tab" aria-controls="panel-model" aria-selected="false" tabindex="-1" data-tab="model" data-i18n="opt.modelHeading"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-cust" role="tab" aria-controls="panel-cust" aria-selected="false" tabindex="-1" data-tab="cust" data-i18n="opt.custHeading"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-docs" role="tab" aria-controls="panel-docs" aria-selected="false" tabindex="-1" data-tab="docs" data-i18n="opt.docsHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-web" role="tab" aria-controls="panel-web" aria-selected="false" tabindex="-1" data-tab="web" data-i18n="opt.webHeading"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-sc" role="tab" aria-controls="panel-sc" aria-selected="false" tabindex="-1" data-tab="sc" data-i18n="opt.scHeading"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-priv" role="tab" aria-controls="panel-priv" aria-selected="false" tabindex="-1" data-tab="priv" data-i18n="opt.privHeading"></button></li>
           </ul>
@@ -202,6 +204,19 @@
         <p id="docsNone" class="hint" data-i18n="opt.docsNone"></p>
         <ul id="docsList" class="docs"></ul>
         <p id="docsUsage" class="hint"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-web" role="tabpanel" aria-labelledby="tab-web" data-panel="web" hidden>
+        <h2 data-i18n="opt.webHeading"></h2>
+        <p class="hint" data-i18n="opt.webHint"></p>
+        <p id="webWarn" class="hint warn" data-i18n="opt.webWarn"></p>
+        <label class="check"><input id="webEnabled" type="checkbox"> <span data-i18n="opt.webEnable"></span></label>
+        <label for="webUrls" data-i18n="opt.webUrls"></label>
+        <textarea id="webUrls" rows="6" spellcheck="false" autocomplete="off" placeholder="https://…"></textarea>
+        <label class="check"><input id="webSearch" type="checkbox"> <span data-i18n="opt.webSearch"></span></label>
+        <p class="hint" data-i18n="opt.webSearchHint"></p>
+        <div class="row"><button id="webSave" type="button" class="primary" data-i18n="opt.webSave"></button></div>
+        <p id="webStatus" class="status" role="status"></p>
       </section>
 
       <section class="tabpanel" id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" data-panel="sc" hidden>

@@ -90,3 +90,8 @@ test('si la API rechaza el esquema, reintenta una vez sin esquema', async () => 
   assert.equal(bodies[1].generationConfig.responseSchema, undefined);
   assert.ok(r.text);
 });
+
+test('tools: solo se incluyen si se pasan', () => {
+  assert.equal(g.buildRequestBody({ userText: 'x' }).tools, undefined);
+  assert.deepEqual(g.buildRequestBody({ userText: 'x', tools: [{ url_context: {} }] }).tools, [{ url_context: {} }]);
+});

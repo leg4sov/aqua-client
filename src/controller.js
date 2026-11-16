@@ -202,6 +202,14 @@
             panel.setImageState('none');
           }
           setState('done');
+          if (res.web) {
+            const w = res.web;
+            const note = T('ctl.webInfo', { read: w.linksRead || 0, n: w.links, tokens: (w.tokens || 0).toLocaleString(state.lang) }) +
+              (w.linksFailed ? T('ctl.webFailed', { f: w.linksFailed }) : '') +
+              (w.searches ? T('ctl.webSearched') : '') +
+              (w.downgraded === 'search' ? T('ctl.webNoSearch') : w.downgraded === 'web' ? T('ctl.webOff') : '');
+            panel.setNotice(note, w.linksFailed || w.downgraded ? 'warn' : 'info');
+          }
           env.send({ type: 'AQUA_SET_PREFS', prefs: { mode } }).catch(() => {});
         } catch (_) {
           fail('INVALID_RESPONSE');

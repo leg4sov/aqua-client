@@ -16,7 +16,7 @@
     return `${API_BASE}/models/${m}:generateContent`;
   }
 
-  function buildRequestBody({ systemPrompt, userText, responseSchema, maxOutputTokens, image }) {
+  function buildRequestBody({ systemPrompt, userText, responseSchema, maxOutputTokens, image, tools }) {
     const generationConfig = { temperature: 0.2, maxOutputTokens: maxOutputTokens || 4096 };
     if (responseSchema) {
       generationConfig.responseMimeType = 'application/json';
@@ -25,6 +25,7 @@
     const parts = image && image.data ? [{ inlineData: { mimeType: image.mime, data: image.data } }, { text: userText }] : [{ text: userText }]; // la imagen va antes del texto
     const body = { contents: [{ role: 'user', parts }], generationConfig };
     if (systemPrompt) body.systemInstruction = { parts: [{ text: systemPrompt }] };
+    if (Array.isArray(tools) && tools.length) body.tools = tools; // p. ej. [{ url_context: {} }, { google_search: {} }]
     return body;
   }
 
@@ -54,6 +55,23 @@
   }
 
   const SCHEMA_ERR = /schema|response_?mime|responseMimeType/i;
+  const SEARCH_ERR = /google_?search|grounding|search/i; // la búsqueda no está disponible (p. ej. plan gratuito)
+  const TOOL_ERR = /url_?context|tool/i;
+
+  const hasTool = (tools, name) => Array.isArray(tools) && tools.some((t) => t && Object.prototype.hasOwnProperty.call(t, name));
+  const without = (tools, name) => tools.filter((t) => !(t && Object.prototype.hasOwnProperty.call(t, name)));
+
+  /** Qué hizo la herramienta web: enlaces leídos/no leídos, si buscó en internet y tokens totales. Todo opcional y a la defensiva. */
+  function webInfo(json) {
+    const cand = json && Array.isArray(json.candidates) ? json.candidates[0] : null;
+    const ucm = cand && (cand.urlContextMetadata || cand.url_context_metadata);
+    const list = (ucm && (ucm.urlMetadata || ucm.url_metadata)) || [];
+    const ok = (x) => /SUCCESS/.test(String((x && (x.urlRetrievalStatus || x.url_retrieval_status)) || ''));
+    const gm = cand && (cand.groundingMetadata || cand.grounding_metadata);
+    const queries = (gm && (gm.webSearchQueries || gm.web_search_queries)) || [];
+    const u = json && json.usageMetadata;
+    return { linksRead: list.filter(ok).length, linksFailed: list.filter((x) => !ok(x)).length, searches: Array.isArray(queries) ? queries.length : 0, totalTokens: Number(u && u.totalTokenCount) || 0 };
+  }
 
   /**
    * @param {{apiKey:string, model:string, systemPrompt?:string, userText:string, responseSchema?:object,
@@ -81,8 +99,10 @@
       else o.signal.addEventListener('abort', onAbort, { once: true });
     }
 
+    let tools = o.tools;
+    let downgraded = ''; // '' | 'search' | 'web'
     async function post(withSchema) {
-      const body = buildRequestBody({ ...o, responseSchema: withSchema ? o.responseSchema : null });
+      const body = buildRequestBody({ ...o, tools, responseSchema: withSchema ? o.responseSchema : null });
       return doFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': o.apiKey },
@@ -104,6 +124,21 @@
           res = await post(false);
           errBody = res.ok ? null : await res.json().catch(() => null);
         }
+        // Búsqueda en internet no disponible (p. ej. plan gratuito): se sigue solo con los enlaces. Si fallan también los enlaces, sin herramientas.
+        const msgTxt = String((errBody && errBody.error && errBody.error.message) || '');
+        if (!res.ok && [400, 403, 429].includes(res.status) && hasTool(tools, 'google_search') && SEARCH_ERR.test(msgTxt)) {
+          tools = without(tools, 'google_search');
+          downgraded = 'search';
+          res = await post(true);
+          errBody = res.ok ? null : await res.json().catch(() => null);
+        }
+        const msg2 = String((errBody && errBody.error && errBody.error.message) || '');
+        if (!res.ok && [400, 403].includes(res.status) && Array.isArray(tools) && tools.length && TOOL_ERR.test(msg2)) {
+          tools = [];
+          downgraded = 'web';
+          res = await post(true);
+          errBody = res.ok ? null : await res.json().catch(() => null);
+        }
         if (!res.ok) throw mapHttpError(res.status, errBody);
       }
       let json;
@@ -112,7 +147,7 @@
       } catch (_) {
         throw new AquaError('INVALID_RESPONSE', 'JSON ilegible');
       }
-      return { ...extractText(json), model: o.model };
+      return { ...extractText(json), model: o.model, web: Array.isArray(tools) && tools.length ? { ...webInfo(json), downgraded } : downgraded ? { ...webInfo(json), downgraded } : null };
     } catch (e) {
       if (e instanceof AquaError) throw e;
       if (timedOut) throw new AquaError('TIMEOUT');

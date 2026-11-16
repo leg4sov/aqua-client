@@ -204,6 +204,24 @@ function paintDocsOptions(d) {
   $('docsImage').checked = d.enabled && d.imageSearch;
 }
 
+function paintWebOptions(w) {
+  $('webUrls').value = w.urls.join('\n');
+  $('webUrls').disabled = !w.enabled;
+  $('webSearch').disabled = !w.enabled;
+  $('webSearch').checked = w.enabled && w.search;
+}
+
+async function saveWebSettings() {
+  const { urls, dropped } = S.parseWebUrls($('webUrls').value);
+  const cur = await currentSettings();
+  const enabled = $('webEnabled').checked;
+  // Al desactivar no se tocan los enlaces ya guardados (el cuadro está deshabilitado).
+  const s = S.sanitizeSettings({ ...cur, web: { enabled, search: $('webSearch').checked, urls: enabled ? urls : cur.web.urls } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  paintWebOptions(s.web);
+  say('webStatus', dropped ? T('opt.webSavedDropped', { n: s.web.urls.length, d: dropped, max: S.MAX_WEB_LINKS }) : T('opt.webSaved', { n: s.web.urls.length }), dropped ? 'err' : 'ok');
+}
+
 async function saveDocsSettings() {
   const s = S.sanitizeSettings({ ...(await currentSettings()), docs: { enabled: $('docsEnabled').checked, k: $('docsK').value, imageSearch: $('docsImage').checked } });
   await api.storage.local.set({ [SETTINGS]: s });
@@ -256,6 +274,8 @@ async function load() {
   $('docsEnabled').checked = s.docs.enabled;
   $('docsK').value = s.docs.k;
   paintDocsOptions(s.docs);
+  $('webEnabled').checked = s.web.enabled;
+  paintWebOptions(s.web);
   $('idleEnabled').checked = s.idle.enabled;
   $('idleSeconds').value = s.idle.seconds;
   $('defaultModel').textContent = S.DEFAULT_MODEL;
@@ -348,6 +368,9 @@ $('grantAccess').addEventListener('click', async () => {
 });
 
 $('docsEnabled').addEventListener('change', saveDocsSettings);
+$('webEnabled').addEventListener('change', saveWebSettings);
+$('webSearch').addEventListener('change', saveWebSettings);
+$('webSave').addEventListener('click', saveWebSettings);
 $('docsK').addEventListener('change', saveDocsSettings);
 $('docsImage').addEventListener('change', saveDocsSettings);
 $('docsAdd').addEventListener('click', () => $('docsFiles').click());

@@ -135,3 +135,18 @@ test('PDF en Ajustes: si pdf.js no se puede cargar muestra un error y no rompe l
   assert.ok(o.$('docsStatus').textContent.includes('Unexpected error'));
   assert.equal(o.$('docsList').children.length, 0);
 });
+
+test('Referencias web: máximo 5 enlaces válidos, avisa de lo descartado y guarda', async () => {
+  const o = await openOptions();
+  assert.equal(o.$('webEnabled').checked, false);
+  assert.equal(o.$('webUrls').disabled, true);
+  assert.ok(o.$('webWarn').textContent.includes('Not recommended'));
+  o.$('webEnabled').checked = true;
+  o.$('webEnabled').dispatchEvent(new o.w.Event('change'));
+  await waitFor(() => !o.$('webUrls').disabled);
+  o.$('webUrls').value = ['https://a.es/1', 'https://a.es/1', 'http://localhost/x', 'https://b.es', 'https://c.es', 'https://d.es', 'https://e.es', 'https://f.es'].join('\n');
+  o.$('webSave').click();
+  await waitFor(() => o.$('webStatus').textContent.includes('discarded'));
+  assert.equal(o.$('webUrls').value.split('\n').length, 5);
+  assert.ok(o.$('webStatus').textContent.includes('Saved 5 links'));
+});

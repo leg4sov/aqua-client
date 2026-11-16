@@ -161,3 +161,12 @@ test('background: AQUA_DOCS_SEARCH usa el índice local, redacta y no expone nom
   assert.equal((await b.send({ type: 'AQUA_DOCS_SEARCH', query: 'chmod permisos ficheros' }, { tab: { id: 1 } })).hits.length, 0); // desactivado
   assert.equal((await b.send({ type: 'AQUA_GET_STATE' }, { tab: { id: 1 } })).docs.enabled, false);
 });
+
+test('settings.web: por defecto apagado; se sanea (credenciales, redes privadas, esquema, tope de 5)', () => {
+  const S = require('../src/settings');
+  assert.deepEqual(S.sanitizeSettings({}).web, { enabled: false, search: false, urls: [] });
+  const w = S.sanitizeWeb({ enabled: true, urls: ['javascript:alert(1)', 'https://u:p@x.es', 'http://192.168.1.2/a', 'https://ok.es/a', 'https://ok.es/a', ...'abcdefg'.split('').map((c) => `https://${c}.es`)] });
+  assert.equal(w.urls.length, S.MAX_WEB_LINKS);
+  assert.equal(w.urls[0], 'https://ok.es/a');
+  assert.equal(S.sanitizeWeb({ enabled: 'yes' }).enabled, false);
+});

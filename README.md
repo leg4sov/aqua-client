@@ -30,6 +30,7 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 - **Moodle question detection** — extracts supported questions from Moodle pages, or lets you ask about text you select yourself.
 - **Gemini API integration** — use your own Google AI Studio API key and choose the model in settings.
 - **Optional reference PDFs** — add your own text-based PDFs; Aqua searches them locally and adds the most relevant excerpts to the request as reference (disabled by default).
+- **Optional web references** — paste up to 5 links; Gemini reads those pages itself and gives them priority; optional internet search only if the links have no answer (off by default).
 - **Privacy-conscious processing** — sends only the selected question or text (plus any PDF excerpts you can see), not the entire page; attempts to redact common sensitive values before sending.
 - **Uncertainty labels** — results can be labelled **Hypothesis** or **Insufficient data** when the model is not sure.
 - **Customisable panel** — choose a colour palette, size (down to ultra-small), opacity, background and position.
@@ -239,6 +240,16 @@ If the model cannot answer confidently, Aqua can label the result **Hypothesis**
 Aqua shrinks the image in your browser (longest side 1,568 px, re-encoded as JPEG) before sending it, keeps it only in memory and discards it after the answer. An image uses roughly 300–1,000 tokens and counts as **one** request. Note: the text redaction cannot hide personal data inside an image (your name, email or campus details in a screenshot), so crop the screenshot to the question.
 
 **With your PDFs (optional):** in **Settings → Reference documents (PDF)**, with *Use my PDFs as reference* on, tick **Also use my PDFs for image questions**. Aqua then makes **two requests per image**: first Gemini reads the question from the image, Aqua searches your PDFs locally with that text, and then the image is sent together with the excerpts (visible under **Sent text**). The image goes to Google in both requests. If the option is off, the PDFs are not used with images.
+
+### Web references (optional)
+
+In **Settings → Web references**, tick **Use my links as reference** and paste up to **5 links** (one per line). Aqua asks Gemini to read those pages with its URL-context tool and to give them priority; the order is: your links → PDF excerpts (if enabled) → own knowledge. It works in all modes (Quiz, Text, Image). A separate option, **Allow searching the internet**, lets Gemini search only if the links have no concrete answer.
+
+- **Requests:** still one per question, whatever the number of links.
+- **Tokens:** this is the real cost. Every page read counts as input tokens (a long page can be thousands), so **adding many links is not recommended**; that is why the maximum is 5. After each answer Aqua shows how many links were read, how many could not be read and the total tokens used.
+- **Limits of Gemini:** pages that need a login, paywalled pages, YouTube and Google Docs cannot be read. Google Search may not be available on the free tier; if Google rejects it, Aqua retries with the links only and says so. On paid plans searches can be billed.
+- **Privacy:** the links (not their content from your computer) are sent to Google with each question. Links with credentials, `localhost` and private network addresses are rejected. Page content is treated as untrusted data.
+- **Not verified yet:** tested with simulated Gemini responses only; no live call with the tools has been made.
 
 ### Reference PDFs (optional)
 

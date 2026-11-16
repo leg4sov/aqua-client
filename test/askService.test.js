@@ -209,3 +209,46 @@ test('imagen + PDF: transcribe la pregunta y busca en local; devuelve fragmentos
   assert.deepEqual((await off.handleImageRead({ requestId: 'r1', image: IMG }, 1)).hits, []);
   assert.equal(s._active.size, 0);
 });
+
+// ---- Referencias web
+const webSvc = (fetchImpl, web) => createAskService({ getConfig: async () => ({ apiKey: 'FAKE_KEY_FOR_TESTS_0123456789', settings: { ...settings, web } }), gemini, fetchImpl, nonce: () => 'abc123' });
+const okBody = (extra) => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ status: 'confirmed', selected_options: [2], answer_text: '' }) }] }, finishReason: 'STOP', ...extra }], usageMetadata: { totalTokenCount: 4321 } }) });
+
+test('web: con enlaces activos se envía url_context, la lista va delimitada y se informa de tokens y enlaces no leídos', async () => {
+  let sent;
+  const f = async (u, init) => { sent = JSON.parse(init.body); return okBody({ urlContextMetadata: { urlMetadata: [{ retrievedUrl: 'https://a.es/', urlRetrievalStatus: 'URL_RETRIEVAL_STATUS_SUCCESS' }, { retrievedUrl: 'https://b.es/', urlRetrievalStatus: 'URL_RETRIEVAL_STATUS_ERROR' }] } }); };
+  const r = await webSvc(f, { enabled: true, search: false, urls: ['https://a.es/', 'https://b.es/'] }).handleAsk(msg(), 1);
+  assert.equal(r.ok, true);
+  assert.deepEqual(sent.tools, [{ url_context: {} }]);
+  const t = sent.contents[0].parts[0].text;
+  assert.ok(t.includes('<<<WEB_abc123') && t.includes('https://a.es/') && t.includes('Do not search elsewhere'));
+  assert.deepEqual([r.web.links, r.web.linksRead, r.web.linksFailed, r.web.tokens], [2, 1, 1, 4321]);
+});
+test('web: con búsqueda permitida se añade google_search y la prioridad lo menciona', async () => {
+  let sent;
+  const f = async (u, init) => { sent = JSON.parse(init.body); return okBody({}); };
+  await webSvc(f, { enabled: true, search: true, urls: ['https://a.es/'] }).handleAsk(msg(), 1);
+  assert.deepEqual(sent.tools, [{ url_context: {} }, { google_search: {} }]);
+  assert.ok(sent.contents[0].parts[0].text.includes('ONLY if none of them'));
+});
+test('web: desactivado o sin enlaces no manda herramientas ni bloque WEB', async () => {
+  for (const web of [{ enabled: false, search: true, urls: ['https://a.es/'] }, { enabled: true, search: false, urls: [] }, undefined]) {
+    let sent;
+    const r = await webSvc(async (u, init) => { sent = JSON.parse(init.body); return okBody({}); }, web).handleAsk(msg(), 1);
+    assert.equal(sent.tools, undefined);
+    assert.ok(!sent.contents[0].parts[0].text.includes('WEB_abc123'));
+    assert.equal(r.web, null);
+  }
+});
+test('web: si Google rechaza la búsqueda se repite solo con los enlaces y se avisa', async () => {
+  const bodies = [];
+  const f = async (u, init) => {
+    bodies.push(JSON.parse(init.body));
+    if (bodies.length === 1) return { ok: false, status: 400, json: async () => ({ error: { status: 'INVALID_ARGUMENT', message: 'google_search tool is not supported on the free tier' } }) };
+    return okBody({});
+  };
+  const r = await webSvc(f, { enabled: true, search: true, urls: ['https://a.es/'] }).handleAsk(msg(), 1);
+  assert.equal(r.ok, true);
+  assert.deepEqual(bodies[1].tools, [{ url_context: {} }]);
+  assert.equal(r.web.downgraded, 'search');
+});

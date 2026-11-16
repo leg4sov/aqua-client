@@ -81,7 +81,12 @@
             reference.push({ label: `page ${c.page}`, text });
           }
         }
+        // Referencias web (enlaces del usuario, opcionalmente búsqueda): las lee Gemini con sus herramientas.
+        const w = settings.web;
+        const web = w && w.enabled && w.urls.length ? { urls: w.urls, search: w.search } : null;
+        const tools = web ? [{ url_context: {} }, ...(web.search ? [{ google_search: {} }] : [])] : undefined;
         const userText = prompts.buildUserMessage({
+          web,
           reference,
           text: prepared.text,
           mode: m.mode,
@@ -98,6 +103,7 @@
           signal: controller.signal,
           fetchImpl: deps.fetchImpl,
           image: m.image,
+          tools,
         });
         const raw = validator.parseModelJson(r.text);
         if (m.mode === 'quiz' && typeof raw === 'object') raw.answer_text = raw.answer_text || '-'; // evita EMPTY si solo hay estado
@@ -112,7 +118,7 @@
         } else if (!answer.answerText) {
           throw new AquaError('EMPTY_RESPONSE');
         }
-        return { ok: true, requestId: m.requestId, result: answer, refs: reference.length, redactions: norm.countRedactions(prepared.redactions), model: settings.model };
+        return { ok: true, requestId: m.requestId, result: answer, refs: reference.length, redactions: norm.countRedactions(prepared.redactions), model: settings.model, web: web ? { ...(r.web || {}), links: web.urls.length, tokens: (r.web && r.web.totalTokens) || (r.usage && r.usage.totalTokenCount) || 0 } : null };
       } catch (e) {
         return { ok: false, requestId: msg && msg.requestId, error: toPlain(e) };
       } finally {
