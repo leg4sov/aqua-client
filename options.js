@@ -450,4 +450,13 @@ $('docsDeleteAll').addEventListener('click', async () => {
 });
 
 wireTabs();
-load();
+// Contraseña: hasta ponerla no se carga nada de los ajustes.
+(async () => {
+  const send = (m) => api.runtime.sendMessage(m);
+  if (await globalThis.Aqua.lockGate.isLocked(send)) {
+    lang = S.sanitizeSettings((await api.storage.local.get(SETTINGS))[SETTINGS]).lang;
+    await globalThis.Aqua.lockGate.ask(document, { send, t: T });
+  }
+  document.documentElement.classList.remove('locking');
+  load();
+})();

@@ -16,7 +16,7 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 
 ![Firefox](https://img.shields.io/badge/Firefox-Primary-FF7139?logo=firefox-browser&logoColor=white)
 ![Chrome](https://img.shields.io/badge/Chrome%2FChromium-Secondary-4285F4?logo=googlechrome&logoColor=white)
-![Version](https://img.shields.io/badge/version-0.11.0-0ea5e9)
+![Version](https://img.shields.io/badge/version-0.12.0-0ea5e9)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-64748b)
 ![Local AI](https://img.shields.io/badge/Local%20AI-optional-10b981)
 ![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white)
@@ -41,9 +41,15 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 - **English and Spanish interface** — English by default, with Spanish available in settings.
 - **Keyboard shortcuts** — open and hide the panel, or move it left or right, without reaching for the toolbar.
 - **Brightness popup and quick settings** — the toolbar icon opens a browser-brightness slider; the 💧 button next to the name opens a compact menu for the API key, connection test, palette, size and visibility.
+- **Optional access password** — a simple password (once per browser session) protects the settings pages, the quick-settings menu and the panel; the brightness slider stays free. See [Access password](#access-password-optional).
 - **Automated tests** — cover core logic, PDF reading and search, error handling, validation, cancellation and extension-manifest checks.
 
 > **Use Aqua responsibly.** It is intended for practice quizzes, revision pages and study materials. It does not fill in or submit Moodle forms. If you use it during an active quiz, confirm that AI assistance is permitted by your instructor. Do not use it for graded assessments where assistance is prohibited.
+
+## What's new in 0.12.0
+
+- **Access password (once per browser session):** the settings page, the quick-settings menu in the popup and the panel's controls stay locked until the password is typed. Typing it in any of them unlocks the others. Closing the browser or reloading the extension locks it again. The brightness slider and hiding the panel are never locked.
+- Version bump for a new upload; no change in permissions. The manifest has no maximum Firefox version, so it keeps loading on newer releases (Firefox 160 at the time of writing).
 
 ## What's new in 0.11.0 (v11)
 
@@ -63,6 +69,7 @@ Aqua's automated tests cover key components, but **the extension has not yet bee
 | PDF reading, indexing and search | Automated tests with the real pdf.js library in Node and a simulated IndexedDB; not yet verified in a real browser |
 | Firefox manifest | Checked with `web-ext lint`; no errors reported, plus warnings about Firefox for Android and about dynamic `import()` calls inside the bundled pdf.js |
 | Settings page layout and the new icon | CSS syntax checked and icon rendered at all sizes; not yet viewed in a real browser |
+| Access password (settings page, popup, panel, background) | Automated tests with simulated browser APIs; not yet verified in a real browser |
 | Firefox installation and real Moodle pages | Not yet manually verified |
 | Chrome/Chromium installation | Not yet manually verified |
 | Live Gemini API requests | Not yet verified with a real API key |
@@ -72,8 +79,8 @@ Aqua's automated tests cover key components, but **the extension has not yet bee
 
 ## Compatibility
 
-- **Primary browser:** Firefox 140 or newer, using the Firefox Manifest V3 configuration (`manifest.json`).
-- **Secondary browser:** Chrome / Chromium, using the Chrome Manifest V3 configuration (`manifest.chrome.json`).
+- **Primary browser:** Firefox 140 or newer (no upper limit set, so newer releases such as Firefox 160 load it), using the Firefox Manifest V3 configuration (`manifest.json`).
+- **Secondary browser:** Chrome / Chromium 102 or newer, using the Chrome Manifest V3 configuration (`manifest.chrome.json`).
 - **Development requirements:** Node.js 20 or newer and npm.
 - **Operating system:** any system that runs Firefox or Chrome (Windows, macOS, Linux). Building needs Node.js; the optional local AI runs on Windows x64 and Linux x64 (CPU only, ~16 GB RAM recommended).
 
@@ -367,6 +374,20 @@ Aqua is designed to send only the material needed for the question, not an entir
 
 Aqua does not use static `content_scripts` to run on every website. PDF indexes are kept in the extension's own IndexedDB, which needs no extra permission.
 
+### Access password (optional)
+
+Aqua can ask for a password before showing the settings page, the quick-settings menu or the panel. It is asked **once per browser session**: the unlocked state lives in `storage.session`, which the browser clears when it closes (and when the extension is reloaded). While locked, the background also refuses requests to Gemini, PDF search and the connection test.
+
+This is a **simple barrier against casual use, not real security**: only a SHA-256 hash of the password is stored, but it is inside the extension's code, so anyone with the source can read or remove it.
+
+To set your own password before building, replace `PASS_HASH` in [`src/lock.js`](src/lock.js) with the hash of your password:
+
+```bash
+printf %s 'YOUR_PASSWORD' | sha256sum
+```
+
+Use `printf` with single quotes (`echo` adds a line break and the hash will not match). To turn the password off, set `PASS_HASH` to an empty string (`''`). Rebuild with `npm run build` afterwards.
+
 ### Data flow
 
 1. You select text or a detected question.
@@ -415,6 +436,7 @@ The tests cover core logic and simulated API responses, including:
 - HTML injection in model responses.
 - Ensuring Moodle forms are not modified.
 - Keeping the API key out of the content script.
+- Access password: locked and unlocked states in the background, the settings page, the popup and the panel; refused requests while locked.
 - Local AI mode: request format, schema fallback, server offline/forbidden errors, thinking-tag removal, the Gemini ↔ local switch and the hidden image mode.
 - Reading real PDFs with pdf.js, chunking, search ranking, the IndexedDB store, upload limits and prompt-injection containment.
 - Language files, shortcut capture, the quick-settings popup and the settings page.
@@ -446,6 +468,8 @@ aqua-client/
 │   ├── i18n
 │   ├── textNormalizer
 │   ├── settings
+│   ├── lock               # access password (hash + session flag)
+│   ├── lockGate           # password screen for settings and popup
 │   ├── shortcuts
 │   ├── moodleDetector
 │   ├── questionExtractor
@@ -508,6 +532,7 @@ aqua-client/
 - The local AI is much weaker than Gemini without reference PDFs, has no image mode and is slower on CPU (roughly 12–20 s per quiz question, estimated).
 - Long answers are displayed as plain text; Markdown is not rendered.
 - There is no answer history or print support by design.
+- The access password is a deterrent, not security (see [Access password](#access-password-optional)). The shortcuts that switch AI or move the panel are not locked.
 - Browser shortcut conflicts with each desktop environment have not been verified.
 - A backend for shared deployments, end-to-end Playwright tests and some Firefox-specific shortcut/packaging work remain future improvements.
 

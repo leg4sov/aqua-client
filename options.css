@@ -109,3 +109,5 @@ ul.results { list-style: none; padding: 0; margin: 4px 0; }
 @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } .side-left { display: none; } .primary-nav, .user-name { display: none; } .tab { padding: 8px 10px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 textarea { box-sizing: border-box; font: inherit; resize: vertical; }
+/* Hasta saber si hay contraseña pendiente no se ve la página (evita el parpadeo); options.js quita la clase. */
+.locking body { visibility: hidden; }

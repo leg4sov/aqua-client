@@ -25,6 +25,9 @@
     } else if (msg.type === 'AQUA_PROVIDER') {
       controller.setProvider(msg.provider);
       sendResponse({ ok: true });
+    } else if (msg.type === 'AQUA_UNLOCKED') {
+      controller.setLocked(false);
+      sendResponse({ ok: true });
     } else if (msg.type === 'AQUA_HIDE') {
       controller.hide();
       sendResponse({ ok: true });

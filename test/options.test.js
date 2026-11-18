@@ -39,7 +39,7 @@ async function openOptions(store = {}) {
     permissions: { contains: async () => true, request: async () => true },
   };
   w.globalThis = w;
-  for (const f of ['src/i18n.js', 'src/errors.js', 'src/textNormalizer.js', 'src/settings.js', 'src/shortcuts.js', 'src/pdfIndex.js', 'src/docStore.js', 'src/pdfText.js', 'src/docManager.js', 'options.js']) w.eval(src(f));
+  for (const f of ['src/i18n.js', 'src/errors.js', 'src/textNormalizer.js', 'src/settings.js', 'src/shortcuts.js', 'src/pdfIndex.js', 'src/docStore.js', 'src/pdfText.js', 'src/docManager.js', 'src/lockGate.js', 'options.js']) w.eval(src(f));
   const $ = (id) => w.document.getElementById(id);
   await waitFor(() => $('docsNone').textContent !== '');
   const fileOf = (name, bytes, type = 'application/pdf') => ({ name, type, size: bytes.length, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });

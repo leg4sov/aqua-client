@@ -145,7 +145,12 @@ $('brightReset').addEventListener('click', () => {
   $('brightLevel').value = 100;
   setBrightness(100);
 });
-$('toSettings').addEventListener('click', () => showView(true));
+$('toSettings').addEventListener('click', async () => {
+  const LG = globalThis.Aqua.lockGate;
+  const send = (m) => api.runtime.sendMessage(m);
+  if ((await LG.isLocked(send)) && !(await LG.ask(document, { send, t: T, cancellable: true }))) return;
+  showView(true);
+});
 $('toBright').addEventListener('click', () => showView(false));
 
 load();

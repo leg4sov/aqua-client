@@ -22,6 +22,9 @@
 .spacer { flex: 1; }
 .badge { font-size: .9em; color: var(--muted); }
 .badge.processing, .badge.done, .badge.error { color: var(--fg); } /* sin rojo ni verde: más discreto */
+.lockbox { padding: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.lockbox input { flex: 1; min-width: 0; font: inherit; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+.lockbox .caveat { flex-basis: 100%; }
 .body { padding: 6px; display: flex; flex-direction: column; gap: 5px; }
 button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: 2px 7px; }
 button:hover:not(:disabled) { border-color: var(--aqua); }

@@ -247,6 +247,11 @@
       onCancel: () => cancel(),
       onHide: () => hide(),
       onSettings: () => env.openSettings(),
+      onUnlock: async (password) => {
+        const r = await env.send({ type: 'AQUA_UNLOCK', password }).catch(() => null);
+        if (r && r.unlocked) setLocked(false);
+        return !!(r && r.unlocked);
+      },
       onModeChange: () => {},
       onPasteImage: (f) => pasteImage(f),
       t: (k, p) => T(k, p),
@@ -260,7 +265,7 @@
       try {
         const st = await env.send({ type: 'AQUA_GET_STATE' });
         if (st && st.ok) {
-          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG };
+          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
           savedMode = st.prefs && st.prefs.mode;
         }
       } catch (_) {
@@ -275,6 +280,7 @@
         panelLang = state.lang;
       }
       panel.show();
+      panel.setLocked(!!state.locked);
       panel.applyAppearance(state.ui);
       panel.setVisibility({ hoverOnly: !!(state.ui && state.ui.hoverOnly), idle: state.idle });
       payload = null;
@@ -298,6 +304,11 @@
       return page;
     }
 
+    function setLocked(on) {
+      state.locked = !!on;
+      if (panel) panel.setLocked(on);
+    }
+
     // Cambia el lado (izquierda/derecha) sin volver a abrir el panel.
     function setSide(side) {
       state.ui = { ...(state.ui || {}), side: side === 'right' ? 'right' : 'left' };
@@ -315,6 +326,7 @@
       show,
       setSide,
       setProvider,
+      setLocked,
       hide,
       isVisible: () => !!panel && panel.isVisible(),
       destroy() {

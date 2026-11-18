@@ -19,7 +19,7 @@ function openPopup({ store = {}, reply } = {}) {
     runtime: { sendMessage: async (m) => { sent.push(m); return reply ? reply(m) : { ok: true }; }, openOptionsPage: async () => { optionsOpened = true; } },
   };
   w.globalThis = w;
-  for (const f of ['src/i18n.js', 'src/errors.js', 'src/textNormalizer.js', 'src/settings.js', 'popup.js']) w.eval(src(f));
+  for (const f of ['src/i18n.js', 'src/errors.js', 'src/textNormalizer.js', 'src/settings.js', 'src/lockGate.js', 'popup.js']) w.eval(src(f));
   const $ = (id) => w.document.getElementById(id);
   return { w, $, store, sent, state: () => ({ closed, optionsOpened }) };
 }

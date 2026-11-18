@@ -49,6 +49,30 @@
     header.append(bSettings, bHide);
     panel.appendChild(header);
 
+    // Con la contraseña sin poner: solo esta cajita (el cuerpo del panel queda oculto).
+    const lockbox = el('form', 'lockbox');
+    lockbox.hidden = true;
+    const pw = doc.createElement('input');
+    pw.type = 'password';
+    pw.autocomplete = 'off';
+    pw.placeholder = T('lock.ph');
+    pw.setAttribute('aria-label', T('lock.ph'));
+    const lockGo = el('button', 'sec', T('lock.go'));
+    lockGo.type = 'submit';
+    const lockMsg = el('div', 'caveat');
+    lockMsg.setAttribute('role', 'alert');
+    lockbox.append(pw, lockGo, lockMsg);
+    lockbox.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ok = await h.onUnlock(pw.value);
+      if (!ok) {
+        lockMsg.textContent = T('lock.bad');
+        pw.value = '';
+        pw.focus({ preventScroll: true });
+      }
+    });
+    panel.appendChild(lockbox);
+
     const body = el('div', 'body');
     const notice = el('div', 'notice');
     notice.hidden = true;
@@ -255,6 +279,13 @@
         const right = ui && ui.side === 'right';
         host.style.left = right ? 'auto' : '10px';
         host.style.right = right ? '10px' : 'auto';
+      },
+      setLocked(on) {
+        body.hidden = !!on;
+        lockbox.hidden = !on;
+        lockMsg.textContent = '';
+        pw.value = '';
+        if (on) pw.focus({ preventScroll: true });
       },
       setStatus(state, text) {
         badge.className = `badge ${state}`;

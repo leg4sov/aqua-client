@@ -5,6 +5,7 @@ const LIB_FILES = [
   'src/errors.js',
   'src/textNormalizer.js',
   'src/settings.js',
+  'src/lock.js',
   'src/prompts.js',
   'src/answerValidator.js',
   'src/geminiClient.js',
@@ -17,7 +18,7 @@ const LIB_FILES = [
 if (typeof importScripts === 'function') importScripts(...LIB_FILES);
 
 const api = globalThis.browser || globalThis.chrome;
-const { settings: S, geminiClient, localClient, askService, errors: E, docStore, textNormalizer: NORM } = globalThis.Aqua;
+const { settings: S, lock: LK, geminiClient, localClient, askService, errors: E, docStore, textNormalizer: NORM } = globalThis.Aqua;
 const CONTENT_FILES = [
   'src/i18n.js',
   'src/errors.js',
@@ -43,6 +44,19 @@ try {
 async function getConfig() {
   const o = await api.storage.local.get([KEY, SETTINGS]);
   return { apiKey: typeof o[KEY] === 'string' ? o[KEY] : '', settings: S.sanitizeSettings(o[SETTINGS]) };
+}
+
+// Contraseña de acceso: una vez por sesión del navegador. Con ella bloqueada no se atiende nada que gaste la API.
+const lock = LK.createLock(api.storage.session);
+const GATED = ['AQUA_ASK', 'AQUA_IMG_READ', 'AQUA_DOCS_SEARCH', 'AQUA_TEST'];
+
+// Avisa a los paneles abiertos de que ya se puede usar (contraseña puesta en Ajustes, popup u otra pestaña).
+async function broadcastUnlocked() {
+  try {
+    for (const t of await api.tabs.query({})) api.tabs.sendMessage(t.id, { type: 'AQUA_UNLOCKED' }).catch(() => {});
+  } catch (_) {
+    /* sin pestañas que avisar */
+  }
 }
 
 // PDF de referencia del usuario: índice local en IndexedDB (se llena desde la página de Ajustes).
@@ -170,12 +184,20 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const fromExtensionPage = typeof sender.url === 'string' && sender.url.startsWith(api.runtime.getURL(''));
 
   (async () => {
+    if (GATED.includes(msg.type) && (await lock.isLocked())) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
     switch (msg.type) {
+      case 'AQUA_LOCK_STATUS':
+        return { ok: true, locked: await lock.isLocked() };
+      case 'AQUA_UNLOCK': {
+        const unlocked = await lock.unlock(msg.password);
+        if (unlocked) broadcastUnlocked();
+        return { ok: true, unlocked };
+      }
       case 'AQUA_GET_STATE': {
         if (tabId === undefined) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
         const o = await api.storage.local.get([KEY, SETTINGS, PREFS]);
         const settings = S.sanitizeSettings(o[SETTINGS]);
-        return { ok: true, hasKey: !!o[KEY], provider: settings.provider, maxChars: settings.maxChars, ui: settings.ui, idle: settings.idle, docs: settings.docs, lang: settings.lang, prefs: S.sanitizePrefs(o[PREFS]) };
+        return { ok: true, locked: await lock.isLocked(), hasKey: !!o[KEY], provider: settings.provider, maxChars: settings.maxChars, ui: settings.ui, idle: settings.idle, docs: settings.docs, lang: settings.lang, prefs: S.sanitizePrefs(o[PREFS]) };
       }
       case 'AQUA_SET_PREFS':
         if (tabId === undefined) return { ok: false };
