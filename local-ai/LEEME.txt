@@ -1,0 +1,43 @@
+AQUA · IA LOCAL (sin internet, opcional)
+========================================
+Esta carpeta se puede copiar tal cual a un USB o disco externo y usarse en cualquier PC
+(Windows o Linux x64) sin instalar nada. Solo hace falta internet la primera vez, para bajar
+el programa y el modelo.
+
+QUÉ HAY AQUÍ
+  descargar.sh        baja llama.cpp (Windows + Linux) y el modelo dentro de esta carpeta
+  iniciar.sh / .bat   arranca la IA con ventana (útil para ver errores)
+  iniciar-oculto.sh / .bat   arranca la IA sin ventana, en segundo plano
+  parar.sh / .bat     apaga la IA y libera la RAM
+  win/  linux/        aquí se guarda llama.cpp (lo rellena descargar.sh)
+  modelos/            aquí se guarda el modelo Qwen3.5-4B-Q4_K_M.gguf (~3 GB)
+
+1. PRIMERA VEZ (en un PC con internet y Linux, macOS o Windows con Git Bash/WSL)
+     bash descargar.sh
+   Si se corta, vuelve a lanzarlo: sigue donde iba.
+   A mano, si no puedes usar el script:
+     - github.com/ggml-org/llama.cpp/releases → la build más reciente "bNNNN"
+       (si la última se llama "vX.Y.Z", su archivo nightly-tag.txt dice qué build usar).
+       Baja "...-bin-win-cpu-x64.zip" → descomprímelo en win/
+       Baja "...-bin-ubuntu-x64.tar.gz" → descomprímelo en linux/
+     - huggingface.co/bartowski/Qwen_Qwen3.5-4B-GGUF → "Qwen_Qwen3.5-4B-Q4_K_M.gguf"
+       → guárdalo en modelos/ como "Qwen3.5-4B-Q4_K_M.gguf".
+
+2. CADA VEZ QUE LO USES
+   Windows: doble clic en iniciar-oculto.bat (o iniciar.bat para verlo en una ventana).
+   Linux:   bash iniciar-oculto.sh (o bash iniciar.sh).
+   Tarda ~30 s en cargar el modelo en la RAM. Para apagarla: parar.bat / bash parar.sh.
+
+3. EN AQUA
+   Ajustes → pestaña "IA local" → "Permitir acceso a localhost" → "Probar conexión".
+   Carga los PDFs del tema en "Documentos de referencia" (un modelo pequeño acierta mucho
+   más con ellos). En Moodle, Alt+Shift+Q cambia entre Gemini y la IA local.
+
+NOTAS
+  - Necesita ~16 GB de RAM (el modelo ocupa 3-4 GB mientras está encendido).
+  - La IA escucha solo en este equipo: http://127.0.0.1:23517
+  - Los errores de arranque quedan en iniciar.log (junto a estos scripts).
+  - En Linux el programa se copia a ~/.aqua-llama porque los USB suelen montarse sin
+    permiso de ejecución. Si falta una librería (p. ej. libgomp.so.1), instálala con el
+    gestor de paquetes de tu sistema.
+  - Algunos PCs de empresa o de centros educativos bloquean programas desde USB.

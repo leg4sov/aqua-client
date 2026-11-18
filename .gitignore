@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.zip
+.env
+.env.*
+config.local.json
+*.log
+.DS_Store
+web-ext-artifacts/
+
+# IA local: los programas y el modelo se bajan con local-ai/descargar.sh (no caben en GitHub)
+local-ai/win/*
+local-ai/linux/*
+local-ai/modelos/*
+!local-ai/*/LEEME.txt

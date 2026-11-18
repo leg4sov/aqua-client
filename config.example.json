@@ -1,0 +1,7 @@
+{
+  "_comment": "Ejemplo SIN secretos. Aqua NO lee este archivo: la clave y los ajustes se guardan desde la página de opciones de la extensión (storage.local). No pegues claves reales en este archivo ni en el repositorio.",
+  "apiKey": "PEGA_AQUI_TU_CLAVE_SOLO_EN_LA_PAGINA_DE_OPCIONES",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 30000,
+  "maxChars": 6000
+}

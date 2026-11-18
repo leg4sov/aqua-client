@@ -1,0 +1,453 @@
+/* Aqua · página de opciones (con selector de idioma). */
+'use strict';
+const api = globalThis.browser || globalThis.chrome;
+const { settings: S, shortcuts: SC, i18n: I18N, errors: E, docStore: DS, pdfText: PT, docManager: DM } = globalThis.Aqua;
+const KEY = 'aqua.apiKey';
+const SETTINGS = 'aqua.settings';
+const ORIGINS = ['https://generativelanguage.googleapis.com/*'];
+const LOCAL_ORIGINS = ['http://localhost/*', 'http://127.0.0.1/*']; // permiso opcional: solo si se usa la IA local
+const $ = (id) => document.getElementById(id);
+
+const docs = DS.createDocStore({ indexedDB: globalThis.indexedDB });
+
+let lang = I18N.DEFAULT_LANG;
+let keyShown = false;
+const T = (k, p) => I18N.t(lang, k, p);
+
+function say(id, text, kind) {
+  const n = $(id);
+  n.textContent = text;
+  n.className = `status ${kind || ''}`;
+}
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = `Aqua · ${T('opt.title')}`;
+  document.querySelectorAll('[data-i18n]').forEach((n) => (n.textContent = T(n.dataset.i18n)));
+  document.querySelectorAll('[data-i18n-ph]').forEach((n) => (n.placeholder = T(n.dataset.i18nPh)));
+  $('toggleKey').textContent = keyShown ? T('opt.hideKey') : T('opt.show');
+  selectTab(currentTab); // la miga de pan lleva el nombre de la pestaña, que cambia con el idioma
+}
+
+// Pestañas de ajustes (estética Moodle): cada apartado es una pestaña; el árbol de la izquierda enlaza a las mismas.
+let currentTab = 'lang';
+function selectTab(name, focus) {
+  currentTab = name;
+  document.querySelectorAll('[data-tab]').forEach((b) => {
+    const on = b.dataset.tab === name;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+    if (on) {
+      $('crumbTab').textContent = b.textContent;
+      if (focus) b.focus();
+    }
+  });
+  document.querySelectorAll('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== name));
+  document.querySelectorAll('[data-tab-link]').forEach((a) => a.classList.toggle('active', a.dataset.tabLink === name));
+}
+function wireTabs() {
+  const tabs = [...document.querySelectorAll('[data-tab]')];
+  tabs.forEach((b, i) => {
+    b.addEventListener('click', () => selectTab(b.dataset.tab));
+    b.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      selectTab(tabs[(i + d + tabs.length) % tabs.length].dataset.tab, true);
+    });
+  });
+  document.querySelectorAll('[data-tab-link]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); selectTab(a.dataset.tabLink); }));
+  // Enlaces decorativos de la barra y las migas: no navegan.
+  document.querySelectorAll('a[href="#"]:not([data-tab-link])').forEach((a) => a.addEventListener('click', (e) => e.preventDefault()));
+}
+
+function paintSwatches() {
+  const color = S.PALETTES[$('uiPalette').value] || S.PALETTES.classic;
+  $('swA').style.color = color;
+  $('swB').style.color = color;
+}
+
+async function renderKeyStatus() {
+  const o = await api.storage.local.get(KEY);
+  say('keyStatus', o[KEY] ? T('opt.keyHas') : T('opt.keyNone'), o[KEY] ? 'ok' : '');
+}
+
+async function renderAccess() {
+  let ok = true;
+  try {
+    ok = await api.permissions.contains({ origins: ORIGINS });
+  } catch (_) {
+    /* sin API de permisos: se asume concedido */
+  }
+  $('grantAccess').hidden = ok;
+  say('accessStatus', ok ? T('opt.accessOk') : T('opt.accessMissing'), ok ? 'ok' : 'err');
+}
+
+// Campo que "graba" la combinación al pulsarla (no hay que escribirla). Solo Firefox (commands.update).
+function shortcutEditor(c) {
+  const cell = document.createElement('td');
+  const input = document.createElement('input');
+  input.readOnly = true;
+  input.value = c.shortcut || '';
+  input.placeholder = T('opt.scPlaceholder');
+  input.setAttribute('aria-label', `${T(`cmd.${c.name}`)}: ${T('opt.scPlaceholder')}`);
+  const mac = /Mac/i.test(navigator.platform || '');
+  const reasons = { 'modifier-only': 'opt.reasonModifier', 'needs-modifier': 'opt.reasonNeedsMod', 'unsupported-key': 'opt.reasonUnsupported' };
+  input.addEventListener('focus', () => say('shortcutStatus', T('opt.scPrompt')));
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Tab') return; // permite salir del campo con el teclado
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape') {
+      input.value = c.shortcut || '';
+      input.blur();
+      return say('shortcutStatus', '');
+    }
+    const r = SC.shortcutFromEvent(e, mac);
+    if (!r.ok) return r.reason === 'modifier-only' ? undefined : say('shortcutStatus', T(reasons[r.reason]), 'err');
+    try {
+      await api.commands.update({ name: c.name, shortcut: r.shortcut });
+      say('shortcutStatus', T('opt.scRegistered', { s: r.shortcut }), 'ok');
+    } catch (_) {
+      say('shortcutStatus', T('opt.scUnsupported', { s: r.shortcut }), 'err');
+    }
+    input.blur();
+    renderShortcuts(true);
+  });
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.textContent = T('opt.scReset');
+  reset.addEventListener('click', async () => {
+    try {
+      await api.commands.reset(c.name);
+      say('shortcutStatus', T('opt.scResetOk'), 'ok');
+    } catch (_) {
+      say('shortcutStatus', T('opt.scResetFail'), 'err');
+    }
+    renderShortcuts(true);
+  });
+  cell.append(input, reset);
+  return cell;
+}
+
+async function renderShortcuts(keepStatus) {
+  const tbody = document.querySelector('#shortcuts tbody');
+  tbody.replaceChildren();
+  let missing = false;
+  try {
+    const cmds = await api.commands.getAll();
+    for (const c of cmds.filter((x) => !x.name.startsWith('_'))) {
+      const tr = document.createElement('tr');
+      const a = document.createElement('td');
+      const b = document.createElement('td');
+      a.textContent = T(`cmd.${c.name}`);
+      b.textContent = c.shortcut || T('opt.scNone');
+      if (!c.shortcut) missing = true;
+      tr.append(a, b);
+      if (typeof api.commands.update === 'function') {
+        $('changeCol').hidden = false;
+        tr.appendChild(shortcutEditor(c));
+      }
+      tbody.appendChild(tr);
+    }
+  } catch (_) {
+    missing = true;
+  }
+  const isFirefox = /Firefox\//.test(navigator.userAgent || '');
+  $('shortcutHelp').textContent = (missing ? T('opt.scMissing') : '') + T(isFirefox ? 'opt.scHowFirefox' : 'opt.scHowChrome') + T('opt.scTail');
+  if (!keepStatus) say('shortcutStatus', '');
+}
+
+// ---- PDF de referencia (opción B): se leen aquí, en el navegador; el índice se guarda en IndexedDB.
+async function loadPdfjs() {
+  if (globalThis.__aquaLoadPdfjs) return globalThis.__aquaLoadPdfjs(); // gancho solo para pruebas
+  const m = await import('./vendor/pdfjs/pdf.js');
+  m.GlobalWorkerOptions.workerSrc = new URL('vendor/pdfjs/pdf.worker.js', location.href).href;
+  return m;
+}
+
+async function renderDocs() {
+  const list = await docs.listDocs();
+  const ul = $('docsList');
+  ul.replaceChildren();
+  for (const d of list) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = d.name;
+    name.title = d.name;
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = T('opt.docsMeta', { pages: d.pages, chunks: d.chunks });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = T('opt.docsDelete');
+    del.addEventListener('click', async () => {
+      await docs.deleteDoc(d.id);
+      say('docsStatus', T('opt.docsDeleted'), 'ok');
+      renderDocs();
+    });
+    li.append(name, meta, del);
+    ul.appendChild(li);
+  }
+  $('docsNone').hidden = list.length > 0;
+  $('docsDeleteAll').hidden = list.length === 0;
+  const chars = list.reduce((n, d) => n + d.chars, 0);
+  $('docsUsage').textContent = list.length ? T('opt.docsUsage', { used: list.length, max: DM.LIMITS.maxDocs, chars: chars.toLocaleString(lang) }) : '';
+}
+
+async function renderLocalAccess() {
+  let ok = true;
+  try {
+    ok = await api.permissions.contains({ origins: LOCAL_ORIGINS });
+  } catch (_) {
+    /* sin API de permisos: se asume concedido */
+  }
+  $('localGrant').hidden = ok;
+  say('localAccess', ok ? T('opt.localAccessOk') : T('opt.localAccessMissing'), ok ? 'ok' : 'err');
+}
+
+// Avisos que dependen de la IA en uso: con la local, los PDF no salen del equipo y la web no se usa.
+function paintProvider(provider, d) {
+  const local = provider === 'local';
+  $('docsWarn').hidden = !d.enabled || local;
+  $('docsLocal').hidden = !d.enabled || !local;
+  $('webLocal').hidden = !local;
+}
+
+// Al activar los PDF: aviso de coste/privacidad y de que no funcionan en modo privado; «PDF + imagen» solo se puede marcar con los PDF activos.
+function paintDocsOptions(d) {
+  $('docsWarn').hidden = !d.enabled;
+  $('docsPrivate').hidden = !d.enabled;
+  $('docsImage').disabled = !d.enabled;
+  $('docsImage').checked = d.enabled && d.imageSearch;
+  paintProvider($('provider').value, d);
+}
+
+function paintWebOptions(w) {
+  $('webUrls').value = w.urls.join('\n');
+  $('webUrls').disabled = !w.enabled;
+  $('webSearch').disabled = !w.enabled;
+  $('webSearch').checked = w.enabled && w.search;
+}
+
+async function saveWebSettings() {
+  const { urls, dropped } = S.parseWebUrls($('webUrls').value);
+  const cur = await currentSettings();
+  const enabled = $('webEnabled').checked;
+  // Al desactivar no se tocan los enlaces ya guardados (el cuadro está deshabilitado).
+  const s = S.sanitizeSettings({ ...cur, web: { enabled, search: $('webSearch').checked, urls: enabled ? urls : cur.web.urls } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  paintWebOptions(s.web);
+  say('webStatus', dropped ? T('opt.webSavedDropped', { n: s.web.urls.length, d: dropped, max: S.MAX_WEB_LINKS }) : T('opt.webSaved', { n: s.web.urls.length }), dropped ? 'err' : 'ok');
+}
+
+async function saveDocsSettings() {
+  const s = S.sanitizeSettings({ ...(await currentSettings()), docs: { enabled: $('docsEnabled').checked, k: $('docsK').value, imageSearch: $('docsImage').checked } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  $('docsK').value = s.docs.k;
+  paintDocsOptions(s.docs);
+  say('docsStatus', T('opt.docsSaved'), 'ok');
+}
+
+async function addPdfs(files) {
+  const results = $('docsResults');
+  results.replaceChildren();
+  let pdfjs;
+  try {
+    pdfjs = await loadPdfjs();
+  } catch (e) {
+    const why = e && (e.name ? `${e.name}: ` : '') + String((e && e.message) || e).slice(0, 160);
+    say('docsStatus', `${E.messageFor('UNKNOWN', lang)} (${why})`, 'err');
+    return;
+  }
+  const out = await DM.addPdfFiles({
+    files,
+    store: docs,
+    extract: (bytes, onP) => PT.extractPdf(pdfjs, bytes, { onProgress: onP }),
+    onProgress: (name, i, n) => say('docsStatus', T('opt.docsReading', { name, i, n })),
+  });
+  for (const r of out) {
+    const li = document.createElement('li');
+    li.textContent = r.ok ? T('opt.docsAdded', { name: r.name, pages: r.pages, chunks: r.chunks }) : T('opt.docsFailed', { name: r.name, reason: E.messageFor(r.code, lang) + (r.detail ? ` (${r.detail})` : '') });
+    results.appendChild(li);
+  }
+  say('docsStatus', '');
+  await renderDocs();
+}
+
+async function load() {
+  const o = await api.storage.local.get([KEY, SETTINGS]);
+  const s = S.sanitizeSettings(o[SETTINGS]);
+  lang = s.lang;
+  $('lang').value = lang;
+  $('model').value = s.model;
+  $('timeoutMs').value = s.timeoutMs;
+  $('maxChars').value = s.maxChars;
+  $('uiPalette').value = s.ui.palette;
+  $('uiSize').value = s.ui.size;
+  $('uiOpacity').value = s.ui.opacity;
+  $('uiOpacityVal').textContent = s.ui.opacity;
+  $('uiBg').value = s.ui.bg;
+  $('uiSide').value = s.ui.side;
+  $('hoverOnly').checked = s.ui.hoverOnly;
+  $('docsEnabled').checked = s.docs.enabled;
+  $('docsK').value = s.docs.k;
+  paintDocsOptions(s.docs);
+  $('webEnabled').checked = s.web.enabled;
+  paintWebOptions(s.web);
+  $('provider').value = s.provider;
+  $('localUrl').value = s.local.url;
+  $('localModel').value = s.local.model;
+  $('localTimeout').value = s.local.timeoutMs;
+  paintProvider(s.provider, s.docs);
+  $('idleEnabled').checked = s.idle.enabled;
+  $('idleSeconds').value = s.idle.seconds;
+  $('defaultModel').textContent = S.DEFAULT_MODEL;
+  $('models').replaceChildren(...S.SUGGESTED_MODELS.map((m) => Object.assign(document.createElement('option'), { value: m })));
+  applyI18n();
+  paintSwatches();
+  await renderKeyStatus();
+  await renderAccess();
+  await renderLocalAccess();
+  await renderShortcuts();
+  await renderDocs();
+}
+
+async function currentSettings() {
+  const o = await api.storage.local.get(SETTINGS);
+  return o[SETTINGS] || {};
+}
+
+$('lang').addEventListener('change', async () => {
+  const s = S.sanitizeSettings({ ...(await currentSettings()), lang: $('lang').value });
+  await api.storage.local.set({ [SETTINGS]: s });
+  lang = s.lang;
+  applyI18n();
+  await renderKeyStatus();
+  await renderAccess();
+  await renderLocalAccess();
+  await renderShortcuts();
+  await renderDocs();
+  say('settingsStatus', '');
+  say('uiStatus', '');
+  say('langStatus', T('opt.langSaved'), 'ok');
+});
+
+$('toggleKey').addEventListener('click', () => {
+  keyShown = $('apiKey').type === 'password';
+  $('apiKey').type = keyShown ? 'text' : 'password';
+  $('toggleKey').textContent = keyShown ? T('opt.hideKey') : T('opt.show');
+});
+
+$('saveKey').addEventListener('click', async () => {
+  const key = $('apiKey').value.trim();
+  if (!S.looksLikeApiKey(key)) return say('keyStatus', T('opt.keyInvalid'), 'err');
+  await api.storage.local.set({ [KEY]: key });
+  $('apiKey').value = '';
+  say('keyStatus', T('opt.keySaved'), 'ok');
+});
+
+$('deleteKey').addEventListener('click', async () => {
+  await api.storage.local.remove(KEY);
+  $('apiKey').value = '';
+  say('keyStatus', T('opt.keyDeleted'), 'ok');
+});
+
+$('uiPalette').addEventListener('change', paintSwatches);
+$('uiOpacity').addEventListener('input', () => ($('uiOpacityVal').textContent = $('uiOpacity').value));
+
+// Guarda la apariencia conservando el resto de ajustes ya guardados.
+$('saveUi').addEventListener('click', async () => {
+  const s = S.sanitizeSettings({ ...(await currentSettings()), ui: { size: $('uiSize').value, opacity: $('uiOpacity').value, side: $('uiSide').value, bg: $('uiBg').value, palette: $('uiPalette').value, hoverOnly: $('hoverOnly').checked }, idle: { enabled: $('idleEnabled').checked, seconds: $('idleSeconds').value } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  $('uiOpacity').value = s.ui.opacity;
+  $('uiOpacityVal').textContent = s.ui.opacity;
+  $('idleSeconds').value = s.idle.seconds;
+  say('uiStatus', T('opt.uiSaved'), 'ok');
+});
+
+$('saveSettings').addEventListener('click', async () => {
+  const model = S.normalizeModelName($('model').value);
+  if (!model) return say('settingsStatus', T('opt.modelInvalid'), 'err');
+  const s = S.sanitizeSettings({ ...(await currentSettings()), model, timeoutMs: $('timeoutMs').value, maxChars: $('maxChars').value });
+  await api.storage.local.set({ [SETTINGS]: s });
+  $('timeoutMs').value = s.timeoutMs;
+  $('maxChars').value = s.maxChars;
+  say('settingsStatus', T('opt.settingsSaved'), 'ok');
+});
+
+$('testConn').addEventListener('click', async () => {
+  say('settingsStatus', T('opt.testing'));
+  const r = await api.runtime.sendMessage({ type: 'AQUA_TEST' });
+  if (r && r.ok) say('settingsStatus', T('opt.testOk', { model: r.model }), 'ok');
+  else say('settingsStatus', r && r.error ? E.messageFor(r.error.code, lang) : T('opt.testUnknown'), 'err');
+});
+
+async function saveLocal() {
+  const url = S.cleanLocalUrl($('localUrl').value);
+  if (!url) {
+    say('localStatus', T('opt.localUrlInvalid'), 'err');
+    return false;
+  }
+  const s = S.sanitizeSettings({ ...(await currentSettings()), provider: $('provider').value, local: { url, model: $('localModel').value, timeoutMs: $('localTimeout').value } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  $('localUrl').value = s.local.url;
+  $('localModel').value = s.local.model;
+  $('localTimeout').value = s.local.timeoutMs;
+  paintProvider(s.provider, s.docs);
+  say('localStatus', T('opt.localSaved'), 'ok');
+  return true;
+}
+
+$('localSave').addEventListener('click', saveLocal);
+$('provider').addEventListener('change', saveLocal);
+$('localTest').addEventListener('click', async () => {
+  if (!(await saveLocal())) return;
+  say('localStatus', T('opt.testing'));
+  const r = await api.runtime.sendMessage({ type: 'AQUA_TEST', target: 'local' });
+  if (r && r.ok) say('localStatus', T('opt.testOk', { model: r.model }), 'ok');
+  else say('localStatus', r && r.error ? E.messageFor(r.error.code, lang) : T('opt.testUnknown'), 'err');
+});
+$('localGrant').addEventListener('click', async () => {
+  try {
+    await api.permissions.request({ origins: LOCAL_ORIGINS }); // debe ir directo en el clic (gesto del usuario)
+  } catch (_) {
+    say('localAccess', T('opt.accessFail'), 'err');
+    return;
+  }
+  await renderLocalAccess();
+});
+
+$('grantAccess').addEventListener('click', async () => {
+  try {
+    await api.permissions.request({ origins: ORIGINS });
+  } catch (_) {
+    say('accessStatus', T('opt.accessFail'), 'err');
+    return;
+  }
+  await renderAccess();
+});
+
+$('docsEnabled').addEventListener('change', saveDocsSettings);
+$('webEnabled').addEventListener('change', saveWebSettings);
+$('webSearch').addEventListener('change', saveWebSettings);
+$('webSave').addEventListener('click', saveWebSettings);
+$('docsK').addEventListener('change', saveDocsSettings);
+$('docsImage').addEventListener('change', saveDocsSettings);
+$('docsAdd').addEventListener('click', () => $('docsFiles').click());
+$('docsFiles').addEventListener('change', async () => {
+  const files = [...$('docsFiles').files];
+  $('docsFiles').value = ''; // permite volver a elegir el mismo archivo
+  if (files.length) await addPdfs(files);
+});
+$('docsDeleteAll').addEventListener('click', async () => {
+  await docs.clear();
+  $('docsResults').replaceChildren();
+  say('docsStatus', T('opt.docsDeleted'), 'ok');
+  renderDocs();
+});
+
+wireTabs();
+load();
