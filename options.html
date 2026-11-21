@@ -53,14 +53,12 @@
                 <li><a href="#" class="home-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3L12 3Z"/></svg><span>Aqua</span></a></li>
                 <li class="open"><a href="#" class="tree-node" data-i18n="opt.navSettings"></a>
                   <ul>
-                <li><a href="#" data-tab-link="lang" data-i18n="opt.langHeading"></a></li>
                 <li><a href="#" data-tab-link="key" data-i18n="opt.keyHeading"></a></li>
-                <li><a href="#" data-tab-link="model" data-i18n="opt.modelHeading"></a></li>
-                <li><a href="#" data-tab-link="local" data-i18n="opt.localHeading"></a></li>
-                <li><a href="#" data-tab-link="cust" data-i18n="opt.custHeading"></a></li>
-                <li><a href="#" data-tab-link="docs" data-i18n="opt.docsHeading"></a></li>
-                <li><a href="#" data-tab-link="web" data-i18n="opt.webHeading"></a></li>
+                <li><a href="#" data-tab-link="model" data-i18n="opt.tabModel"></a></li>
+                <li><a href="#" data-tab-link="docs" data-i18n="opt.tabDocs"></a></li>
                 <li><a href="#" data-tab-link="sc" data-i18n="opt.scHeading"></a></li>
+                <li><a href="#" data-tab-link="cust" data-i18n="opt.custHeading"></a></li>
+                <li><a href="#" data-tab-link="lang" data-i18n="opt.langHeading"></a></li>
                 <li><a href="#" data-tab-link="priv" data-i18n="opt.privHeading"></a></li>
                   </ul>
                 </li>
@@ -74,28 +72,16 @@
       <main class="content">
         <div class="content-card">
           <ul class="nav-tabs" role="tablist">
-            <li role="presentation"><button type="button" class="tab active" id="tab-lang" role="tab" aria-controls="panel-lang" aria-selected="true" tabindex="0" data-tab="lang" data-i18n="opt.langHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-key" role="tab" aria-controls="panel-key" aria-selected="false" tabindex="-1" data-tab="key" data-i18n="opt.keyHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-model" role="tab" aria-controls="panel-model" aria-selected="false" tabindex="-1" data-tab="model" data-i18n="opt.modelHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-local" role="tab" aria-controls="panel-local" aria-selected="false" tabindex="-1" data-tab="local" data-i18n="opt.localHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-cust" role="tab" aria-controls="panel-cust" aria-selected="false" tabindex="-1" data-tab="cust" data-i18n="opt.custHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-docs" role="tab" aria-controls="panel-docs" aria-selected="false" tabindex="-1" data-tab="docs" data-i18n="opt.docsHeading"></button></li>
-            <li role="presentation"><button type="button" class="tab" id="tab-web" role="tab" aria-controls="panel-web" aria-selected="false" tabindex="-1" data-tab="web" data-i18n="opt.webHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab active" id="tab-key" role="tab" aria-controls="panel-key" aria-selected="true" tabindex="0" data-tab="key" data-i18n="opt.keyHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-model" role="tab" aria-controls="panel-model" aria-selected="false" tabindex="-1" data-tab="model" data-i18n="opt.tabModel"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-docs" role="tab" aria-controls="panel-docs" aria-selected="false" tabindex="-1" data-tab="docs" data-i18n="opt.tabDocs"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-sc" role="tab" aria-controls="panel-sc" aria-selected="false" tabindex="-1" data-tab="sc" data-i18n="opt.scHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-cust" role="tab" aria-controls="panel-cust" aria-selected="false" tabindex="-1" data-tab="cust" data-i18n="opt.custHeading"></button></li>
+            <li role="presentation"><button type="button" class="tab" id="tab-lang" role="tab" aria-controls="panel-lang" aria-selected="false" tabindex="-1" data-tab="lang" data-i18n="opt.langHeading"></button></li>
             <li role="presentation"><button type="button" class="tab" id="tab-priv" role="tab" aria-controls="panel-priv" aria-selected="false" tabindex="-1" data-tab="priv" data-i18n="opt.privHeading"></button></li>
           </ul>
 
-      <section class="tabpanel" id="panel-lang" role="tabpanel" aria-labelledby="tab-lang" data-panel="lang">
-        <h2 data-i18n="opt.langHeading"></h2>
-        <label for="lang" data-i18n="opt.langLabel"></label>
-        <select id="lang">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-        </select>
-        <p id="langStatus" class="status" role="status"></p>
-      </section>
-
-      <section class="tabpanel" id="panel-key" role="tabpanel" aria-labelledby="tab-key" data-panel="key" hidden>
+      <section class="tabpanel" id="panel-key" role="tabpanel" aria-labelledby="tab-key" data-panel="key">
         <h2 data-i18n="opt.keyHeading"></h2>
         <p class="hint"><span data-i18n="opt.keyHint1"></span><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a><span data-i18n="opt.keyHint2"></span><code>storage.local</code><span data-i18n="opt.keyHint3"></span></p>
         <label for="apiKey" data-i18n="opt.keyLabel"></label>
@@ -108,6 +94,19 @@
           <button id="deleteKey" type="button" data-i18n="opt.deleteKey"></button>
         </div>
         <p id="keyStatus" class="status" role="status"></p>
+        <h3 data-i18n="opt.key2Heading"></h3>
+        <p class="hint" data-i18n="opt.key2Hint"></p>
+        <p class="hint warn" data-i18n="opt.key2Warn"></p>
+        <label for="apiKey2" data-i18n="opt.key2Label"></label>
+        <div class="row">
+          <input id="apiKey2" type="password" autocomplete="off" spellcheck="false" data-i18n-ph="opt.keyPlaceholder">
+          <button id="toggleKey2" type="button"></button>
+        </div>
+        <div class="row">
+          <button id="saveKey2" type="button" class="primary" data-i18n="opt.saveKey"></button>
+          <button id="deleteKey2" type="button" data-i18n="opt.deleteKey"></button>
+        </div>
+        <p id="key2Status" class="status" role="status"></p>
         <p class="hint"><span data-i18n="opt.accessHint1"></span><code>generativelanguage.googleapis.com</code><span data-i18n="opt.accessHint2"></span></p>
         <div class="row"><button id="grantAccess" type="button" class="primary" hidden data-i18n="opt.grant"></button></div>
         <p id="accessStatus" class="status" role="status"></p>
@@ -134,9 +133,6 @@
           <button id="testConn" type="button" data-i18n="opt.testConn"></button>
         </div>
         <p id="settingsStatus" class="status" role="status"></p>
-      </section>
-
-      <section class="tabpanel" id="panel-local" role="tabpanel" aria-labelledby="tab-local" data-panel="local" hidden>
         <h2 data-i18n="opt.localHeading"></h2>
         <p class="hint" data-i18n="opt.localHint"></p>
         <p class="hint warn" data-i18n="opt.localPdfWarn"></p>
@@ -166,20 +162,55 @@
         <p id="localAccess" class="status" role="status"></p>
       </section>
 
+      <section class="tabpanel" id="panel-docs" role="tabpanel" aria-labelledby="tab-docs" data-panel="docs" hidden>
+        <h2 data-i18n="opt.docsHeading"></h2>
+        <p class="hint" data-i18n="opt.docsHint"></p>
+        <p id="docsWarn" class="hint warn" hidden data-i18n="opt.docsWarn"></p>
+        <p id="docsPrivate" class="hint warn" hidden data-i18n="opt.docsPrivate"></p>
+        <p id="docsLocal" class="hint" hidden data-i18n="opt.docsLocal"></p>
+        <label class="check"><input id="docsEnabled" type="checkbox"> <span data-i18n="opt.docsEnable"></span></label>
+        <label class="check"><input id="docsImage" type="checkbox"> <span data-i18n="opt.docsImage"></span></label>
+        <p class="hint" data-i18n="opt.docsImageHint"></p>
+        <label for="docsK" data-i18n="opt.docsK"></label>
+        <input id="docsK" type="number" min="1" max="8" step="1">
+        <div class="row">
+          <button id="docsAdd" type="button" class="primary" data-i18n="opt.docsAdd"></button>
+          <button id="docsDeleteAll" type="button" hidden data-i18n="opt.docsDeleteAll"></button>
+        </div>
+        <input id="docsFiles" type="file" accept="application/pdf,.pdf" multiple hidden>
+        <p id="docsStatus" class="status" role="status"></p>
+        <ul id="docsResults" class="hint results"></ul>
+        <p id="docsNone" class="hint" data-i18n="opt.docsNone"></p>
+        <ul id="docsList" class="docs"></ul>
+        <p id="docsUsage" class="hint"></p>
+        <h2 data-i18n="opt.webHeading"></h2>
+        <p class="hint" data-i18n="opt.webHint"></p>
+        <p id="webWarn" class="hint warn" data-i18n="opt.webWarn"></p>
+        <p id="webLocal" class="hint warn" hidden data-i18n="opt.webLocal"></p>
+        <label class="check"><input id="webEnabled" type="checkbox"> <span data-i18n="opt.webEnable"></span></label>
+        <label for="webUrls" data-i18n="opt.webUrls"></label>
+        <textarea id="webUrls" rows="6" spellcheck="false" autocomplete="off" placeholder="https://…"></textarea>
+        <label class="check"><input id="webSearch" type="checkbox"> <span data-i18n="opt.webSearch"></span></label>
+        <p class="hint" data-i18n="opt.webSearchHint"></p>
+        <div class="row"><button id="webSave" type="button" class="primary" data-i18n="opt.webSave"></button></div>
+        <p id="webStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="tabpanel" id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" data-panel="sc" hidden>
+        <h2 data-i18n="opt.scHeading"></h2>
+        <table id="shortcuts"><thead><tr><th data-i18n="opt.scAction"></th><th data-i18n="opt.scCurrent"></th><th id="changeCol" hidden data-i18n="opt.scChange"></th></tr></thead><tbody></tbody></table>
+        <p id="shortcutStatus" class="status" role="status"></p>
+        <p id="shortcutHelp" class="hint"></p>
+        <h2 data-i18n="opt.autoHeading"></h2>
+        <p class="hint" data-i18n="opt.autoHint"></p>
+        <p class="hint warn" data-i18n="opt.autoWarn"></p>
+        <label class="check"><input id="autoEnabled" type="checkbox"> <span data-i18n="opt.autoEnable"></span></label>
+        <p id="autoStatus" class="status" role="status"></p>
+      </section>
+
       <section class="tabpanel" id="panel-cust" role="tabpanel" aria-labelledby="tab-cust" data-panel="cust" hidden>
         <h2 data-i18n="opt.custHeading"></h2>
         <p class="hint"><span data-i18n="opt.custHint1"></span><strong data-i18n="opt.custHint2"></strong><span data-i18n="opt.custHint3"></span><strong data-i18n="opt.custHint4"></strong><span data-i18n="opt.custHint5"></span></p>
-        <label for="uiPalette" data-i18n="opt.paletteLabel"></label>
-        <select id="uiPalette">
-          <option value="classic" data-i18n="opt.palClassic"></option>
-          <option value="light" data-i18n="opt.palLight"></option>
-          <option value="dark" data-i18n="opt.palDark"></option>
-        </select>
-        <div class="swatches" aria-hidden="true">
-          <div class="swatch light"><span id="swA" data-i18n="opt.swatchText"></span></div>
-          <div class="swatch dark"><span id="swB" data-i18n="opt.swatchText"></span></div>
-        </div>
-        <p class="hint" data-i18n="opt.swatchHint"></p>
         <div class="grid2">
           <div>
             <label for="uiSize" data-i18n="opt.sizeLabel"></label>
@@ -204,6 +235,17 @@
             </select>
           </div>
         </div>
+        <label for="uiPalette" data-i18n="opt.paletteLabel"></label>
+        <select id="uiPalette">
+          <option value="classic" data-i18n="opt.palClassic"></option>
+          <option value="light" data-i18n="opt.palLight"></option>
+          <option value="dark" data-i18n="opt.palDark"></option>
+        </select>
+        <div class="swatches" aria-hidden="true">
+          <div class="swatch light"><span id="swA" data-i18n="opt.swatchText"></span></div>
+          <div class="swatch dark"><span id="swB" data-i18n="opt.swatchText"></span></div>
+        </div>
+        <p class="hint" data-i18n="opt.swatchHint"></p>
         <label for="uiOpacity"><span data-i18n="opt.opacityLabel"></span> <span id="uiOpacityVal"></span>% <span data-i18n="opt.opacityMin"></span></label>
         <input id="uiOpacity" type="range" min="30" max="100" step="5">
         <label class="check"><input id="hoverOnly" type="checkbox"> <span data-i18n="opt.hoverOnly"></span></label>
@@ -216,48 +258,14 @@
         <p id="uiStatus" class="status" role="status"></p>
       </section>
 
-      <section class="tabpanel" id="panel-docs" role="tabpanel" aria-labelledby="tab-docs" data-panel="docs" hidden>
-        <h2 data-i18n="opt.docsHeading"></h2>
-        <p class="hint" data-i18n="opt.docsHint"></p>
-        <p id="docsWarn" class="hint warn" hidden data-i18n="opt.docsWarn"></p>
-        <p id="docsPrivate" class="hint warn" hidden data-i18n="opt.docsPrivate"></p>
-        <p id="docsLocal" class="hint" hidden data-i18n="opt.docsLocal"></p>
-        <label class="check"><input id="docsEnabled" type="checkbox"> <span data-i18n="opt.docsEnable"></span></label>
-        <label class="check"><input id="docsImage" type="checkbox"> <span data-i18n="opt.docsImage"></span></label>
-        <p class="hint" data-i18n="opt.docsImageHint"></p>
-        <label for="docsK" data-i18n="opt.docsK"></label>
-        <input id="docsK" type="number" min="1" max="8" step="1">
-        <div class="row">
-          <button id="docsAdd" type="button" class="primary" data-i18n="opt.docsAdd"></button>
-          <button id="docsDeleteAll" type="button" hidden data-i18n="opt.docsDeleteAll"></button>
-        </div>
-        <input id="docsFiles" type="file" accept="application/pdf,.pdf" multiple hidden>
-        <p id="docsStatus" class="status" role="status"></p>
-        <ul id="docsResults" class="hint results"></ul>
-        <p id="docsNone" class="hint" data-i18n="opt.docsNone"></p>
-        <ul id="docsList" class="docs"></ul>
-        <p id="docsUsage" class="hint"></p>
-      </section>
-
-      <section class="tabpanel" id="panel-web" role="tabpanel" aria-labelledby="tab-web" data-panel="web" hidden>
-        <h2 data-i18n="opt.webHeading"></h2>
-        <p class="hint" data-i18n="opt.webHint"></p>
-        <p id="webWarn" class="hint warn" data-i18n="opt.webWarn"></p>
-        <p id="webLocal" class="hint warn" hidden data-i18n="opt.webLocal"></p>
-        <label class="check"><input id="webEnabled" type="checkbox"> <span data-i18n="opt.webEnable"></span></label>
-        <label for="webUrls" data-i18n="opt.webUrls"></label>
-        <textarea id="webUrls" rows="6" spellcheck="false" autocomplete="off" placeholder="https://…"></textarea>
-        <label class="check"><input id="webSearch" type="checkbox"> <span data-i18n="opt.webSearch"></span></label>
-        <p class="hint" data-i18n="opt.webSearchHint"></p>
-        <div class="row"><button id="webSave" type="button" class="primary" data-i18n="opt.webSave"></button></div>
-        <p id="webStatus" class="status" role="status"></p>
-      </section>
-
-      <section class="tabpanel" id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" data-panel="sc" hidden>
-        <h2 data-i18n="opt.scHeading"></h2>
-        <table id="shortcuts"><thead><tr><th data-i18n="opt.scAction"></th><th data-i18n="opt.scCurrent"></th><th id="changeCol" hidden data-i18n="opt.scChange"></th></tr></thead><tbody></tbody></table>
-        <p id="shortcutStatus" class="status" role="status"></p>
-        <p id="shortcutHelp" class="hint"></p>
+      <section class="tabpanel" id="panel-lang" role="tabpanel" aria-labelledby="tab-lang" data-panel="lang" hidden>
+        <h2 data-i18n="opt.langHeading"></h2>
+        <label for="lang" data-i18n="opt.langLabel"></label>
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+        <p id="langStatus" class="status" role="status"></p>
       </section>
 
       <section class="tabpanel" id="panel-priv" role="tabpanel" aria-labelledby="tab-priv" data-panel="priv" hidden>

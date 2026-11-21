@@ -78,6 +78,10 @@
     notice.hidden = true;
     notice.setAttribute('role', 'alert');
     body.appendChild(notice);
+    const autotag = el('div', 'autotag'); // modo Auto activado: en el tamaño ultra pequeño sustituye al aviso largo
+    autotag.hidden = true;
+    autotag.textContent = 'auto: on';
+    body.appendChild(autotag);
 
     const controls = el('div', 'row controls');
     const bSel = btn(T('ui.selection'), 'sec', () => h.onUseSelection());
@@ -291,6 +295,10 @@
         badge.className = `badge ${state}`;
         badge.textContent = text || T(`status.${state}`);
       },
+      setAutoTag(on) {
+        autotag.hidden = !on;
+      },
+      isUltra: () => isUltra(),
       setNotice(text, kind) {
         notice.hidden = !text;
         notice.textContent = text || '';

@@ -31,6 +31,7 @@ const CONTENT_FILES = [
   'content.js',
 ];
 const KEY = 'aqua.apiKey';
+const KEY2 = 'aqua.apiKey2'; // clave de reserva (opcional)
 const SETTINGS = 'aqua.settings';
 const PREFS = 'aqua.prefs';
 
@@ -42,8 +43,8 @@ try {
 }
 
 async function getConfig() {
-  const o = await api.storage.local.get([KEY, SETTINGS]);
-  return { apiKey: typeof o[KEY] === 'string' ? o[KEY] : '', settings: S.sanitizeSettings(o[SETTINGS]) };
+  const o = await api.storage.local.get([KEY, KEY2, SETTINGS]);
+  return { apiKey: typeof o[KEY] === 'string' ? o[KEY] : '', apiKey2: typeof o[KEY2] === 'string' ? o[KEY2] : '', settings: S.sanitizeSettings(o[SETTINGS]) };
 }
 
 // Contraseña de acceso: una vez por sesión del navegador. Con ella bloqueada no se atiende nada que gaste la API.
@@ -195,9 +196,9 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       case 'AQUA_GET_STATE': {
         if (tabId === undefined) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
-        const o = await api.storage.local.get([KEY, SETTINGS, PREFS]);
+        const o = await api.storage.local.get([KEY, KEY2, SETTINGS, PREFS]);
         const settings = S.sanitizeSettings(o[SETTINGS]);
-        return { ok: true, locked: await lock.isLocked(), hasKey: !!o[KEY], provider: settings.provider, maxChars: settings.maxChars, ui: settings.ui, idle: settings.idle, docs: settings.docs, lang: settings.lang, prefs: S.sanitizePrefs(o[PREFS]) };
+        return { ok: true, locked: await lock.isLocked(), hasKey: !!o[KEY] || !!o[KEY2], provider: settings.provider, maxChars: settings.maxChars, ui: settings.ui, idle: settings.idle, docs: settings.docs, auto: settings.auto, lang: settings.lang, prefs: S.sanitizePrefs(o[PREFS]) };
       }
       case 'AQUA_SET_PREFS':
         if (tabId === undefined) return { ok: false };

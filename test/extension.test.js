@@ -339,7 +339,7 @@ test('Ajustes: todos los id que usa options.js existen en options.html y hay una
   const have = new Set([...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
   const used = new Set([...read('options.js').matchAll(/\$\('([A-Za-z]+)'\)/g)].map((m) => m[1]));
   for (const id of used) assert.ok(have.has(id), `falta #${id}`);
-  assert.equal((html.match(/role="tabpanel"/g) || []).length, 9); // un apartado de ajustes por pestaña (estética Moodle)
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, 7); // un apartado de ajustes por pestaña (modelo+IA local y documentos+web van juntos) (estética Moodle)
   assert.ok(/class="navbar"/.test(html) && /class="breadcrumb"/.test(html) && /class="nav-tabs"/.test(html));
   assert.ok(!/<(script|style)[^>]*>[^<]+<\/(script|style)>/i.test(html)); // sin código ni estilos en línea (CSP de la extensión)
   assert.ok(!/prefers-color-scheme:\s*dark/.test(read('options.css'))); // colores de Moodle: siempre claro

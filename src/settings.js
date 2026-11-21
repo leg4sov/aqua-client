@@ -70,7 +70,10 @@
   const MAX_WEB_LINKS = 5;
   const MAX_URL_LEN = 2000;
   const DEFAULT_WEB = Object.freeze({ enabled: false, search: false, urls: [] });
-  const PRIVATE_HOST = /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/;
+  const PRIVATE_HOST = /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|0\.)/;
+  const INTERNAL_TLD = /\.(local|localhost|internal|lan|home|corp|intranet|test|invalid|example)$/i;
+  // La URL se envía a Google: no se aceptan enlaces que lleven una clave, sesión o contraseña en sus parámetros.
+  const SECRET_PARAM = /^(.*[_-])?(token|key|apikey|api_key|sesskey|session|sessionid|sid|password|passwd|pass|pwd|secret|auth|authorization|signature|sig|otp|jwt|bearer)([_-].*)?$/i;
 
   /** Enlace válido para Gemini: http(s), sin usuario/contraseña, con dominio público. Devuelve la URL normalizada o null. */
   function cleanWebUrl(s) {
@@ -83,7 +86,9 @@
     }
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
     if (u.username || u.password) return null; // nunca credenciales dentro del enlace
-    if (!u.hostname.includes('.') || PRIVATE_HOST.test(u.hostname)) return null; // los visita Google: localhost y redes privadas no sirven
+    if (!u.hostname.includes('.') || PRIVATE_HOST.test(u.hostname) || INTERNAL_TLD.test(u.hostname)) return null; // los visita Google: localhost y redes privadas no sirven
+    for (const name of new URLSearchParams(u.search).keys()) if (SECRET_PARAM.test(name)) return null;
+    if (/[?&#](access_token|id_token|token|key|sesskey|password)=/i.test(u.hash)) return null;
     return u.href;
   }
 
@@ -136,6 +141,12 @@
     };
   }
 
+  // Modo Auto: apagado por defecto. Con él, la tecla + marca en la página la opción sugerida de UNA pregunta por pulsación.
+  const DEFAULT_AUTO = Object.freeze({ enabled: false });
+  function sanitizeAuto(raw) {
+    return { enabled: !!raw && typeof raw === 'object' && raw.enabled === true };
+  }
+
   function sanitizeSettings(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
     const timeout = Number(r.timeoutMs);
@@ -149,6 +160,7 @@
       idle: sanitizeIdle(r.idle),
       docs: sanitizeDocs(r.docs),
       web: sanitizeWeb(r.web),
+      auto: sanitizeAuto(r.auto),
       lang: LANGS.includes(r.lang) ? r.lang : DEFAULT_LANG,
     };
   }
@@ -165,7 +177,7 @@
     return typeof key === 'string' && /^[\x21\x23-\x26\x28-\x7E]{20,256}$/.test(key.trim());
   }
 
-  const api = { PROVIDERS, DEFAULT_LOCAL, cleanLocalUrl, sanitizeLocal, DEFAULT_MODEL, SUGGESTED_MODELS, DEFAULTS, DEFAULT_PREFS, MODES, DEFAULT_UI, DEFAULT_IDLE, sanitizeIdle, DEFAULT_DOCS, sanitizeDocs, MAX_WEB_LINKS, DEFAULT_WEB, cleanWebUrl, parseWebUrls, sanitizeWeb, SIZES, LANGS, DEFAULT_LANG, PALETTES, MIN_OPACITY, sanitizeUi, normalizeModelName, sanitizeSettings, sanitizePrefs, looksLikeApiKey };
+  const api = { PROVIDERS, DEFAULT_LOCAL, cleanLocalUrl, sanitizeLocal, DEFAULT_MODEL, SUGGESTED_MODELS, DEFAULTS, DEFAULT_PREFS, MODES, DEFAULT_UI, DEFAULT_IDLE, sanitizeIdle, DEFAULT_AUTO, sanitizeAuto, DEFAULT_DOCS, sanitizeDocs, MAX_WEB_LINKS, DEFAULT_WEB, cleanWebUrl, parseWebUrls, sanitizeWeb, SIZES, LANGS, DEFAULT_LANG, PALETTES, MIN_OPACITY, sanitizeUi, normalizeModelName, sanitizeSettings, sanitizePrefs, looksLikeApiKey };
   A.settings = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })();

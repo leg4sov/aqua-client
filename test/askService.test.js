@@ -252,3 +252,64 @@ test('web: si Google rechaza la búsqueda se repite solo con los enlaces y se av
   assert.deepEqual(bodies[1].tools, [{ url_context: {} }]);
   assert.equal(r.web.downgraded, 'search');
 });
+
+test('modo select (desplegables del modo Auto): se acepta y solo se devuelven las líneas hueco=opción', async () => {
+  let sent;
+  const s = svc(async (u, init) => { sent = JSON.parse(init.body); return geminiOk({ status: 'confirmed', answer_text: '1=2\n2=1', explanation: 'larga', caveats: 'x', commands: [{ command: 'ls' }] }); });
+  const r = await s.handleAsk(msg({ mode: 'select', text: 'Tipo: Desplegables\nHUECO 1: 1) a 2) b', meta: { type: 'select', optionCount: 3 } }), 1);
+  assert.equal(r.ok, true);
+  assert.equal(r.result.answerText, '1=2\n2=1');
+  assert.equal(r.result.explanation, '');
+  assert.deepEqual(r.result.commands, []);
+  assert.ok(sent.contents[0].parts[0].text.includes('MODE: select'));
+});
+
+// ---- Clave de reserva
+const KEY_A = 'FAKE_KEY_FOR_TESTS_AAAAAAAAAAAA';
+const KEY_B = 'FAKE_KEY_FOR_TESTS_BBBBBBBBBBBB';
+const backupSvc = (fetchImpl, keys, clock) => createAskService({ getConfig: async () => ({ apiKey: keys[0], apiKey2: keys[1], settings }), gemini, fetchImpl, nonce: () => 'abc123', now: clock });
+const okReply = () => geminiOk({ status: 'confirmed', selected_options: [2], answer_text: '' });
+
+test('clave de reserva: si la principal agota su cuota se usa la reserva y se avisa; la siguiente pregunta va directa a la reserva', async () => {
+  const used = [];
+  let t = 0;
+  const f = async (u, init) => { used.push(init.headers['x-goog-api-key']); return init.headers['x-goog-api-key'] === KEY_A ? httpError(429, 'quota', 'RESOURCE_EXHAUSTED') : okReply(); };
+  const s = backupSvc(f, [KEY_A, KEY_B], () => t);
+  const r1 = await s.handleAsk(msg(), 1);
+  assert.equal(r1.ok, true);
+  assert.equal(r1.usedBackup, true);
+  assert.deepEqual(used, [KEY_A, KEY_B]);
+  const r2 = await s.handleAsk(msg({ requestId: 'r2' }), 1);
+  assert.equal(r2.usedBackup, true);
+  assert.deepEqual(used, [KEY_A, KEY_B, KEY_B]); // no gasta otra petición fallida con la principal
+  t += 11 * 60 * 1000; // pasado el tiempo, vuelve a probar con la principal
+  await s.handleAsk(msg({ requestId: 'r3' }), 1);
+  assert.equal(used[3], KEY_A);
+});
+
+test('clave de reserva: también si la principal es rechazada (AUTH); otros errores no cambian de clave', async () => {
+  const used = [];
+  const auth = async (u, init) => { used.push(init.headers['x-goog-api-key']); return init.headers['x-goog-api-key'] === KEY_A ? httpError(403, 'denied', 'PERMISSION_DENIED') : okReply(); };
+  const r = await backupSvc(auth, [KEY_A, KEY_B]).handleAsk(msg(), 1);
+  assert.equal(r.usedBackup, true);
+  used.length = 0;
+  const bad = async (u, init) => { used.push(init.headers['x-goog-api-key']); return httpError(500, 'boom', 'INTERNAL'); };
+  const r2 = await backupSvc(bad, [KEY_A, KEY_B]).handleAsk(msg(), 1);
+  assert.equal(r2.ok, false);
+  assert.deepEqual(used, [KEY_A]); // un error del servidor no gasta la reserva
+});
+
+test('clave de reserva: si fallan las dos se devuelve el error; sin reserva todo igual; solo la reserva también vale', async () => {
+  const used = [];
+  const q = async (u, init) => { used.push(1); return httpError(429, 'quota', 'RESOURCE_EXHAUSTED'); };
+  const r = await backupSvc(q, [KEY_A, KEY_B]).handleAsk(msg(), 1);
+  assert.equal(r.error.code, 'QUOTA');
+  assert.equal(used.length, 2);
+  const none = await backupSvc(async () => okReply(), ['', '']).handleAsk(msg(), 1);
+  assert.equal(none.error.code, 'NO_API_KEY');
+  const only = await backupSvc(async () => okReply(), ['', KEY_B]).handleAsk(msg(), 1);
+  assert.equal(only.ok, true);
+  assert.equal(only.usedBackup, false);
+  const single = await backupSvc(async () => okReply(), [KEY_A, '']).handleAsk(msg(), 1);
+  assert.equal(single.usedBackup, false);
+});

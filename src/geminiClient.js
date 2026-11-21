@@ -54,7 +54,7 @@
     return { text, finishReason: finish || '', usage: json.usageMetadata || null };
   }
 
-  const SCHEMA_ERR = /schema|response_?mime|responseMimeType/i;
+  const SCHEMA_ERR = /schema|response[ _]?mime|mime type|responseMimeType/i;
   const SEARCH_ERR = /google_?search|grounding|search/i; // la búsqueda no está disponible (p. ej. plan gratuito)
   const TOOL_ERR = /url_?context|tool/i;
 

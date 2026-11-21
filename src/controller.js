@@ -19,7 +19,7 @@
     const win = env.window;
     let panel = null;
     let page = null;
-    let state = { provider: 'gemini', hasKey: false, maxChars: norm.DEFAULT_MAX_CHARS, ui: null, lang: i18n.DEFAULT_LANG, idle: { enabled: true, seconds: 5 }, docs: { enabled: false, k: 4, imageSearch: false } };
+    let state = { provider: 'gemini', hasKey: false, maxChars: norm.DEFAULT_MAX_CHARS, ui: null, lang: i18n.DEFAULT_LANG, idle: { enabled: true, seconds: 5 }, docs: { enabled: false, k: 4, imageSearch: false }, auto: { enabled: false } };
     let panelLang = null;
     const T = (k, p) => i18n.t(state.lang, k, p);
     const msg = (code) => errors.messageFor(code, state.lang);
@@ -28,6 +28,7 @@
     let questions = [];
     let currentRequest = null;
     let seq = 0;
+    let usedBackup = false; // la última respuesta salió con la clave de reserva
 
     function setState(s, text) {
       panel.setStatus(s, text);
@@ -129,7 +130,10 @@
     function pickQuestion(i) {
       const q = questions[i];
       if (!q) return;
-      const ok = setPayload(extractor.formatQuestion(q), { type: q.type, optionCount: q.options.length }, q.options, `${T('ctl.qNote', { n: q.number })}:`, q.number, `${q.text}\n${q.options.join('\n')}`);
+      const gapOpts = q.gaps ? q.gaps.flatMap((g) => g.options) : [];
+      const items = q.items || [];
+      const optionCount = q.gaps ? Math.max(0, ...q.gaps.map((g) => g.options.length)) : q.items ? q.items.length : q.options.length;
+      const ok = setPayload(extractor.formatQuestion(q), { type: q.type, optionCount }, q.options, `${T('ctl.qNote', { n: q.number })}:`, q.number, `${q.text}\n${q.options.concat(gapOpts, items).join('\n')}`);
       if (ok) {
         panel.setMode(q.options.length ? 'quiz' : q.type === 'short' ? 'short' : 'long'); // sugerencia automática; se puede cambiar
         const warn = [];
@@ -155,9 +159,9 @@
       return ws.map((w) => text[w]).filter(Boolean);
     }
 
-    async function ask() {
+    async function ask(opts) {
       if (currentRequest) return;
-      const mode = panel.getMode();
+      const mode = (opts && opts.mode) || panel.getMode(); // 'select', 'order' y 'short' (desarrollo) los pide el modo Auto
       if (mode === 'image') {
         if (!image) return panel.setNotice(T('ctl.noImageYet'), 'warn');
       } else {
@@ -202,6 +206,9 @@
             panel.setImageState('none');
           }
           setState('done');
+          usedBackup = !!res.usedBackup;
+          const backupNote = usedBackup ? T('ctl.backupUsed') : '';
+          if (backupNote) panel.setNotice(backupNote, 'warn');
           if (state.provider === 'local' && mode !== 'image' && !res.refs) panel.setNotice(T('ctl.localNoPdf'), 'info'); // responde igual, pero avisa
           if (res.web) {
             const w = res.web;
@@ -209,9 +216,10 @@
               (w.linksFailed ? T('ctl.webFailed', { f: w.linksFailed }) : '') +
               (w.searches ? T('ctl.webSearched') : '') +
               (w.downgraded === 'search' ? T('ctl.webNoSearch') : w.downgraded === 'web' ? T('ctl.webOff') : '');
-            panel.setNotice(note, w.linksFailed || w.downgraded ? 'warn' : 'info');
+            panel.setNotice(backupNote ? `${note} ${backupNote}` : note, w.linksFailed || w.downgraded || backupNote ? 'warn' : 'info');
           }
-          env.send({ type: 'AQUA_SET_PREFS', prefs: { mode } }).catch(() => {});
+          if (!(opts && opts.mode)) env.send({ type: 'AQUA_SET_PREFS', prefs: { mode } }).catch(() => {}); // los modos que pide Auto no son del panel: no se guardan
+          return res.result; // lo usa el modo Auto
         } catch (_) {
           fail('INVALID_RESPONSE');
         }
@@ -220,8 +228,200 @@
         panel.setNotice(msg('CANCELLED'), 'info');
       } else {
         const code = (res && res.error && res.error.code) || 'UNKNOWN';
-        fail(code);
+        // Con enlaces web cada página cuenta como tokens y tarda más: se avisa de la causa más probable.
+        fail(code, res && res.error && res.error.web && ['QUOTA', 'TIMEOUT'].includes(code) ? ` ${T('ctl.webHint')}` : '');
       }
+    }
+
+    // ---- Modo Auto (opcional, apagado por defecto): la tecla + marca la opción sugerida de UNA pregunta por pulsación.
+    // Nunca envía el cuestionario, no cambia de página y no marca nada que ya tenga respuesta.
+    let autoRunning = false;
+    const autoSkipped = new Set(); // preguntas a las que el modelo no supo dar una respuesta válida: la siguiente pulsación pasa a otra
+    const isAutoQ = (q) => ((q.type === 'single' || q.type === 'multi') && q.options.length > 0) || (q.type === 'select' && !!q.gaps && q.gaps.length > 0) || q.type === 'open' || ((q.type === 'short' || q.type === 'fill') && q.fields > 0 && q.fields <= extractor.MAX_TEXT_FIELDS) || (q.type === 'order' && !!q.items && q.items.length > 1);
+
+    function autoTargets() {
+      const byOrder = Array.from(doc.querySelectorAll('.que')).filter((n) => n.querySelector('.qtext'));
+      const els = questions.map((q, i) => (q.id && doc.getElementById(q.id)) || byOrder[i] || null);
+      const open = (i) => {
+        const el = els[i];
+        if (!el || !isAutoQ(questions[i]) || autoSkipped.has(questions[i].id || `#${i}`)) return false;
+        if (questions[i].type === 'open') return extractor.isEssayEmpty(el);
+        if (questions[i].type === 'short' || questions[i].type === 'fill') return extractor.textInputs(el).some((f) => f.value.trim() === '');
+        if (questions[i].type === 'order') return extractor.orderItems(el).length === questions[i].items.length; // se ordena una sola vez (autoSkipped)
+        if (questions[i].type === 'select') return extractor.selectGaps(el).some((g) => extractor.selectEmpty(g.select)); // queda algún hueco sin elegir
+        return !extractor.isAnswered(el) && extractor.optionEntries(el).some((e) => !e.input.disabled);
+      };
+      const order = questions.map((_, i) => i); // siempre por orden de la página: la primera pendiente desde arriba
+      return { els, open, order };
+    }
+
+    function reveal(el) {
+      if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    // Avisa de lo marcado y se desplaza a la siguiente pregunta pendiente.
+    function finishAuto(q, marked, r, idx, els, open, order, doneText) {
+      const nextIdx = order.slice(order.indexOf(idx) + 1).find(open);
+      const next = nextIdx === undefined ? null : questions[nextIdx];
+      if (next) reveal(els[nextIdx]);
+      const tail = next ? T('ctl.autoNext', { next: next.number }) : T('ctl.autoLast');
+      panel.setNotice(`${doneText || T('ctl.autoMarked', { n: q.number, m: marked })}${r.status === 'confirmed' ? '' : ` ${T('ctl.autoUnconfirmed')}`} ${tail}${usedBackup ? ` ${T('ctl.backupUsed')}` : ''}`, r.status === 'confirmed' && !usedBackup ? 'info' : 'warn');
+    }
+
+    // Desplegables: la respuesta son líneas «hueco=opción». Solo se rellenan los huecos vacíos y solo con una opción válida de ese hueco.
+    function fillGaps(q, el, idx, r, els, open, order) {
+      const gaps = extractor.selectGaps(el);
+      const chosen = new Map();
+      for (const line of String(r.answerText || '').split('\n')) {
+        const m = /^\s*(?:hueco\s*)?(\d{1,2})\s*[=:]\s*(\d{1,2})\s*$/i.exec(line);
+        if (!m) continue;
+        const g = Number(m[1]);
+        const o = Number(m[2]);
+        if (g >= 1 && g <= gaps.length && o >= 1 && o <= gaps[g - 1].options.length && !chosen.has(g)) chosen.set(g, o);
+      }
+      if (!chosen.size) return autoSkipped.add(q.id || `#${idx}`), panel.setNotice(T('ctl.autoNoAnswer', { n: q.number }), 'warn');
+      let marked = 0;
+      for (const [g, o] of chosen) {
+        const { select, options } = gaps[g - 1];
+        if (select.disabled || !extractor.selectEmpty(select)) continue; // lo que ya elegiste tú no se toca
+        select.value = options[o - 1].value;
+        if (select.value !== options[o - 1].value) continue;
+        select.dispatchEvent(new win.Event('input', { bubbles: true }));
+        select.dispatchEvent(new win.Event('change', { bubbles: true })); // Moodle y la página se enteran como si lo hubieras elegido tú
+        marked++;
+      }
+      if (!marked) return panel.setNotice(T('ctl.autoTaken', { n: q.number }), 'warn');
+      finishAuto(q, marked, r, idx, els, open, order);
+    }
+
+    // Desarrollo: escribe la respuesta corta en el campo vacío (textarea y/o editor). No toca nada que ya hayas escrito.
+    function writeEssay(q, el, idx, r, els, open, order) {
+      const text = String(r.answerText || '').trim().slice(0, 2000);
+      if (!text) return autoSkipped.add(q.id || `#${idx}`), panel.setNotice(T('ctl.autoNoAnswer', { n: q.number }), 'warn');
+      if (!extractor.isEssayEmpty(el)) return panel.setNotice(T('ctl.autoTaken', { n: q.number }), 'warn');
+      const { ta, ed } = extractor.essayField(el);
+      for (const f of [ta, ed]) {
+        if (!f) continue;
+        if (f === ta) f.value = text;
+        else f.textContent = text;
+        f.dispatchEvent(new win.Event('input', { bubbles: true }));
+        f.dispatchEvent(new win.Event('change', { bubbles: true }));
+        f.dispatchEvent(new win.Event('keyup', { bubbles: true })); // los editores enriquecidos (Atto) sincronizan al soltar una tecla
+      }
+      autoSkipped.add(q.id || `#${idx}`);
+      finishAuto(q, 1, r, idx, els, open, order, T('ctl.autoWrote', { n: q.number }));
+    }
+
+    // Huecos de texto / respuesta corta: la respuesta son líneas «n=texto». Solo se rellenan las cajas vacías, con texto de una línea.
+    function fillTexts(q, el, idx, r, els, open, order) {
+      const inputs = extractor.textInputs(el);
+      const chosen = new Map();
+      for (const line of String(r.answerText || '').split('\n')) {
+        const m = /^\s*(?:campo\s*)?(\d{1,2})\s*[=:]\s*(.+?)\s*$/i.exec(line);
+        if (!m) continue;
+        const n = Number(m[1]);
+        const v = m[2].replace(/^["'«“`]+|["'»”`]+$/g, '').slice(0, 200);
+        if (n >= 1 && n <= inputs.length && v && !chosen.has(n)) chosen.set(n, v);
+      }
+      if (!chosen.size && inputs.length === 1) {
+        const raw = String(r.answerText || '').split('\n')[0].replace(/^\s*(?:campo\s*)?\d{1,2}\s*[=:]\s*/i, '').trim().replace(/^["'«“`]+|["'»”`]+$/g, '').slice(0, 200); // sin «1=»
+        if (raw) chosen.set(1, raw);
+      }
+      let written = 0;
+      for (const [n, v] of chosen) {
+        const input = inputs[n - 1];
+        if (input.value.trim() !== '') continue; // lo que escribiste tú no se toca
+        input.value = q.numeric ? (/-?\d+(?:[.,]\d+)?/.exec(v) || [v])[0] : v;
+        input.dispatchEvent(new win.Event('input', { bubbles: true }));
+        input.dispatchEvent(new win.Event('change', { bubbles: true }));
+        written++;
+      }
+      autoSkipped.add(q.id || `#${idx}`); // una sola vez por pregunta
+      if (!written) return panel.setNotice(T(chosen.size ? 'ctl.autoTaken' : 'ctl.autoNoAnswer', { n: q.number }), 'warn');
+      finishAuto(q, written, r, idx, els, open, order, T('ctl.autoWrote', { n: q.number }));
+    }
+
+    // Ordenar: la respuesta es una lista «3,1,2». Solo se aplica si usa cada elemento una vez; se reordena la lista y su campo oculto.
+    function applyOrder(q, el, idx, r, els, open, order) {
+      const items = extractor.orderItems(el);
+      const n = items.length;
+      const perm = String(r.answerText || '').split(/[^0-9]+/).filter(Boolean).map(Number);
+      autoSkipped.add(q.id || `#${idx}`); // una sola vez por pregunta: el orden actual ya no se puede distinguir del tuyo
+      const valid = n >= 2 && perm.length === n && new Set(perm).size === n && perm.every((k) => k >= 1 && k <= n);
+      const parent = n ? items[0].el.parentNode : null;
+      if (!valid || !items.every((i) => i.el.parentNode === parent)) return panel.setNotice(T('ctl.autoNoAnswer', { n: q.number }), 'warn');
+      perm.forEach((k) => parent.appendChild(items[k - 1].el));
+      // Campo oculto con el orden (lista separada por comas): se permuta igual que los elementos.
+      const hidden = Array.from(el.querySelectorAll('input[type="hidden"]')).find((h) => !h.disabled && h.value.split(',').length === n && h.value.split(',').every(Boolean) && !/sequencecheck|flagged|:sequence/i.test(h.name));
+      if (hidden) {
+        const old = hidden.value.split(',');
+        hidden.value = perm.map((k) => old[k - 1]).join(',');
+        hidden.dispatchEvent(new win.Event('input', { bubbles: true }));
+        hidden.dispatchEvent(new win.Event('change', { bubbles: true }));
+      }
+      finishAuto(q, n, r, idx, els, open, order, T('ctl.autoOrdered', { n: q.number }));
+    }
+
+    async function autoStep() {
+      if (autoRunning || currentRequest || !panel || !panel.isVisible()) return;
+      autoRunning = true;
+      try {
+        questions = extractor.extractQuestions(doc); // se relee la página: puede haber cambiado desde la última detección
+        panel.setQuestions(questions);
+        const { els, open, order } = autoTargets();
+        const idx = order.find(open);
+        if (idx === undefined) return panel.setNotice(T('ctl.autoNone'), 'info');
+        const q = questions[idx];
+        const el = els[idx];
+        reveal(el);
+        pickQuestion(idx);
+        if (!payload) return;
+        const r = await ask(q.type === 'select' ? { mode: 'select' } : q.type === 'order' ? { mode: 'order' } : q.type === 'open' ? { mode: 'short' } : q.type === 'short' || q.type === 'fill' ? { mode: 'fill' } : undefined);
+        if (!r) return;
+        if (q.type === 'select') return fillGaps(q, el, idx, r, els, open, order);
+        if (q.type === 'order') return applyOrder(q, el, idx, r, els, open, order);
+        if (q.type === 'short' || q.type === 'fill') return fillTexts(q, el, idx, r, els, open, order);
+        if (q.type === 'open') return writeEssay(q, el, idx, r, els, open, order);
+        if (!Array.isArray(r.selected)) return;
+        const skip = () => autoSkipped.add(q.id || `#${idx}`);
+        if (extractor.isAnswered(el)) return panel.setNotice(T('ctl.autoTaken', { n: q.number }), 'warn'); // la respondiste mientras tanto
+        const entries = extractor.optionEntries(el);
+        const picks = [...new Set(r.selected)].filter((n) => Number.isInteger(n) && n >= 1 && n <= entries.length);
+        if (!picks.length) return skip(), panel.setNotice(T('ctl.autoNoAnswer', { n: q.number }), 'warn');
+        if (q.type === 'single' && picks.length !== 1) return skip(), panel.setNotice(T('ctl.autoUnsure', { n: q.number }), 'warn');
+        let marked = 0;
+        for (const n of picks) {
+          const input = entries[n - 1].input;
+          if (input.disabled) continue;
+          if (!input.checked) input.click(); // clic real: Moodle se entera como si lo hicieras tú
+          if (input.checked) marked++;
+        }
+        finishAuto(q, marked, r, idx, els, open, order);
+      } finally {
+        autoRunning = false;
+      }
+    }
+
+    function onKey(e) {
+      if (!state.auto || !state.auto.enabled || state.locked || !panel || !panel.isVisible()) return;
+      if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return; // una pulsación = una pregunta; mantenerla no repite
+      if (e.key !== '+' && e.code !== 'NumpadAdd') return;
+      const t = (e.composedPath && e.composedPath()[0]) || e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return; // no interfiere al escribir
+      e.preventDefault();
+      e.stopPropagation();
+      autoStep();
+    }
+    let keyBound = false;
+    function bindKey() {
+      if (keyBound) return;
+      doc.addEventListener('keydown', onKey, true);
+      keyBound = true;
+    }
+    function unbindKey() {
+      if (!keyBound) return;
+      doc.removeEventListener('keydown', onKey, true);
+      keyBound = false;
     }
 
     function cancel() {
@@ -265,7 +465,7 @@
       try {
         const st = await env.send({ type: 'AQUA_GET_STATE' });
         if (st && st.ok) {
-          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
+          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, auto: { enabled: !!(st.auto && st.auto.enabled) }, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
           savedMode = st.prefs && st.prefs.mode;
         }
       } catch (_) {
@@ -282,6 +482,7 @@
       panel.show();
       panel.setLocked(!!state.locked);
       panel.applyAppearance(state.ui);
+      autoSkipped.clear();
       panel.setVisibility({ hoverOnly: !!(state.ui && state.ui.hoverOnly), idle: state.idle });
       payload = null;
       image = null;
@@ -300,6 +501,9 @@
       panel.setUnsupported(false);
       if (savedMode) panel.setMode(savedMode);
       panel.setImageAllowed(state.provider !== 'local'); // después de setMode: si se guardó «imagen», vuelve a Quiz
+      bindKey();
+      panel.setAutoTag(state.auto.enabled);
+      if (state.auto.enabled && !panel.isUltra()) panel.setNotice(T('ctl.autoOn'), 'info'); // en ultra pequeño basta la etiqueta «auto: on»
       if (!state.hasKey && state.provider !== 'local') panel.setNotice(msg('NO_API_KEY'), 'warn');
       return page;
     }
@@ -331,6 +535,7 @@
       isVisible: () => !!panel && panel.isVisible(),
       destroy() {
         cancel();
+        unbindKey();
         if (panel) panel.destroy();
         panel = null;
       },

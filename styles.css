@@ -55,6 +55,8 @@ textarea.paste::placeholder { color: var(--muted); opacity: 1; }
 .seg { display: flex; gap: 3px; align-items: center; cursor: pointer; }
 .seg input { margin: 0; appearance: none; -webkit-appearance: none; width: .8em; height: .8em; border: 1px solid var(--fg); border-radius: 50%; background: transparent; cursor: pointer; }
 .seg input:checked { background: var(--fg); } /* el círculo del selector: literalmente del color del texto */
+.autotag { display: none; font-size: 7px; line-height: 1; opacity: .65; text-align: right; letter-spacing: .2px; }
+:host([data-size="xxs"]) .autotag:not([hidden]) { display: block; }
 .notice { padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--aqua-soft); }
 .notice.warn { border-color: #e6c36a; background: #fff8e1; color: #5c4300; }
 .notice.error { background: var(--aqua-soft); border-color: var(--line); color: var(--fg); } /* los errores, del color del texto */

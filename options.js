@@ -3,6 +3,7 @@
 const api = globalThis.browser || globalThis.chrome;
 const { settings: S, shortcuts: SC, i18n: I18N, errors: E, docStore: DS, pdfText: PT, docManager: DM } = globalThis.Aqua;
 const KEY = 'aqua.apiKey';
+const KEY2 = 'aqua.apiKey2';
 const SETTINGS = 'aqua.settings';
 const ORIGINS = ['https://generativelanguage.googleapis.com/*'];
 const LOCAL_ORIGINS = ['http://localhost/*', 'http://127.0.0.1/*']; // permiso opcional: solo si se usa la IA local
@@ -30,7 +31,7 @@ function applyI18n() {
 }
 
 // Pestañas de ajustes (estética Moodle): cada apartado es una pestaña; el árbol de la izquierda enlaza a las mismas.
-let currentTab = 'lang';
+let currentTab = 'key';
 function selectTab(name, focus) {
   currentTab = name;
   document.querySelectorAll('[data-tab]').forEach((b) => {
@@ -69,8 +70,9 @@ function paintSwatches() {
 }
 
 async function renderKeyStatus() {
-  const o = await api.storage.local.get(KEY);
+  const o = await api.storage.local.get([KEY, KEY2]);
   say('keyStatus', o[KEY] ? T('opt.keyHas') : T('opt.keyNone'), o[KEY] ? 'ok' : '');
+  say('key2Status', o[KEY2] ? T('opt.keyHas') : T('opt.key2None'), o[KEY2] ? 'ok' : '');
 }
 
 async function renderAccess() {
@@ -243,6 +245,12 @@ async function saveWebSettings() {
   say('webStatus', dropped ? T('opt.webSavedDropped', { n: s.web.urls.length, d: dropped, max: S.MAX_WEB_LINKS }) : T('opt.webSaved', { n: s.web.urls.length }), dropped ? 'err' : 'ok');
 }
 
+async function saveAutoSettings() {
+  const s = S.sanitizeSettings({ ...(await currentSettings()), auto: { enabled: $('autoEnabled').checked } });
+  await api.storage.local.set({ [SETTINGS]: s });
+  say('autoStatus', T('opt.autoSaved'), 'ok');
+}
+
 async function saveDocsSettings() {
   const s = S.sanitizeSettings({ ...(await currentSettings()), docs: { enabled: $('docsEnabled').checked, k: $('docsK').value, imageSearch: $('docsImage').checked } });
   await api.storage.local.set({ [SETTINGS]: s });
@@ -296,6 +304,7 @@ async function load() {
   $('docsK').value = s.docs.k;
   paintDocsOptions(s.docs);
   $('webEnabled').checked = s.web.enabled;
+  $('autoEnabled').checked = s.auto.enabled;
   paintWebOptions(s.web);
   $('provider').value = s.provider;
   $('localUrl').value = s.local.url;
@@ -353,6 +362,30 @@ $('deleteKey').addEventListener('click', async () => {
   await api.storage.local.remove(KEY);
   $('apiKey').value = '';
   say('keyStatus', T('opt.keyDeleted'), 'ok');
+});
+
+let key2Shown = false;
+$('toggleKey2').textContent = T('opt.show');
+$('toggleKey2').addEventListener('click', () => {
+  key2Shown = $('apiKey2').type === 'password';
+  $('apiKey2').type = key2Shown ? 'text' : 'password';
+  $('toggleKey2').textContent = key2Shown ? T('opt.hideKey') : T('opt.show');
+});
+
+$('saveKey2').addEventListener('click', async () => {
+  const key = $('apiKey2').value.trim();
+  if (!S.looksLikeApiKey(key)) return say('key2Status', T('opt.keyInvalid'), 'err');
+  const o = await api.storage.local.get(KEY);
+  if (o[KEY] === key) return say('key2Status', T('opt.key2Same'), 'err'); // la misma clave no sirve de reserva
+  await api.storage.local.set({ [KEY2]: key });
+  $('apiKey2').value = '';
+  say('key2Status', T('opt.key2Saved'), 'ok');
+});
+
+$('deleteKey2').addEventListener('click', async () => {
+  await api.storage.local.remove(KEY2);
+  $('apiKey2').value = '';
+  say('key2Status', T('opt.key2Deleted'), 'ok');
 });
 
 $('uiPalette').addEventListener('change', paintSwatches);
@@ -432,6 +465,7 @@ $('grantAccess').addEventListener('click', async () => {
 
 $('docsEnabled').addEventListener('change', saveDocsSettings);
 $('webEnabled').addEventListener('change', saveWebSettings);
+$('autoEnabled').addEventListener('change', saveAutoSettings);
 $('webSearch').addEventListener('change', saveWebSettings);
 $('webSave').addEventListener('click', saveWebSettings);
 $('docsK').addEventListener('change', saveDocsSettings);

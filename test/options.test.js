@@ -150,3 +150,26 @@ test('Referencias web: máximo 5 enlaces válidos, avisa de lo descartado y guar
   assert.equal(o.$('webUrls').value.split('\n').length, 5);
   assert.ok(o.$('webStatus').textContent.includes('Saved 5 links'));
 });
+
+test('Clave de reserva en Ajustes: se guarda aparte, no puede ser igual a la principal y se puede borrar', async () => {
+  const MAIN = 'FAKE_KEY_FOR_TESTS_AAAAAAAAAAAA';
+  const BACK = 'FAKE_KEY_FOR_TESTS_BBBBBBBBBBBB';
+  const o = await openOptions({ 'aqua.apiKey': MAIN });
+  assert.ok(o.$('key2Status').textContent.includes('No backup key'));
+  o.$('apiKey2').value = 'mal formato con espacios';
+  o.$('saveKey2').click();
+  await waitFor(() => o.$('key2Status').textContent.includes('does not look valid'));
+  assert.equal(o.store['aqua.apiKey2'], undefined);
+  o.$('apiKey2').value = MAIN;
+  o.$('saveKey2').click();
+  await waitFor(() => o.$('key2Status').textContent.includes('same as the main'));
+  assert.equal(o.store['aqua.apiKey2'], undefined);
+  o.$('apiKey2').value = BACK;
+  o.$('saveKey2').click();
+  await waitFor(() => o.store['aqua.apiKey2'] === BACK);
+  assert.equal(o.store['aqua.apiKey'], MAIN); // la principal no se toca
+  assert.equal(o.$('apiKey2').value, ''); // el campo se vacía: la clave no queda a la vista
+  o.$('deleteKey2').click();
+  await waitFor(() => o.store['aqua.apiKey2'] === undefined);
+  assert.equal(o.store['aqua.apiKey'], MAIN);
+});

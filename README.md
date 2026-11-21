@@ -34,6 +34,7 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 - **Optional local AI (offline)** — answer with a model running on your own computer (llama.cpp + Qwen3.5 4B), no internet or API key needed; switch with **Alt+Shift+Q**. Ready-made scripts in [`local-ai/`](local-ai/) also run it from a USB drive.
 - **Optional reference PDFs** — add your own text-based PDFs; Aqua searches them locally and adds the most relevant excerpts to the request as reference (disabled by default).
 - **Optional web references** — paste up to 5 links; Gemini reads those pages itself and gives them priority; optional internet search only if the links have no answer (off by default).
+- **Optional Auto mode (+ key)** — off by default. With the panel open, pressing **+** ticks the suggested answer of the next unanswered multiple-choice question, one question per press. See [Auto mode](#auto-mode-optional).
 - **Privacy-conscious processing** — sends only the selected question or text (plus any PDF excerpts you can see), not the entire page; attempts to redact common sensitive values before sending.
 - **Uncertainty labels** — results can be labelled **Hypothesis** or **Insufficient data** when the model is not sure.
 - **Customisable panel** — choose a colour palette, size (down to ultra-small), opacity, background and position.
@@ -44,7 +45,37 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 - **Optional access password** — a simple password (once per browser session) protects the settings pages, the quick-settings menu and the panel; the brightness slider stays free. See [Access password](#access-password-optional).
 - **Automated tests** — cover core logic, PDF reading and search, error handling, validation, cancellation and extension-manifest checks.
 
-> **Use Aqua responsibly.** It is intended for practice quizzes, revision pages and study materials. It does not fill in or submit Moodle forms. If you use it during an active quiz, confirm that AI assistance is permitted by your instructor. Do not use it for graded assessments where assistance is prohibited.
+> **Use Aqua responsibly.** It is intended for practice quizzes, revision pages and study materials. By default it does not fill in or submit Moodle forms; the optional [Auto mode](#auto-mode-optional) ticks one answer per key press and never submits. If you use it during an active quiz, confirm that AI assistance is permitted by your instructor. Do not use it for graded assessments where assistance is prohibited.
+
+## What's new in 0.17.2
+
+- **Matching questions** (dropdowns whose first option "Choose..." has value `0`, as in real Moodle) are now detected and filled by Auto. Before, Aqua treated that placeholder as a real option.
+- **Ordering questions:** the list is found even if it is outside `.answer` or in a different wrapper; the hidden field is matched more tolerantly.
+
+## What's new in 0.17.1 (and 0.17.0)
+
+- **Auto now also fills essay (development) questions** with a short answer (only in empty fields) **and orders "put in order" questions** (lists of bars/boxes, top to bottom or as the statement says). **Short-answer, numerical and typed-gap (cloze) questions are filled too**, one per press, only in empty boxes (a numeric box gets just the number). Ordering is done once per question, by reordering the list and its hidden field; it follows Moodle's ordering-plugin structure, so check it on your real quiz.
+- **Practice quiz** (`testkit/cuestionario-practica-aqua.html`): two new draggable ordering questions (13 and 14).
+- **Settings tidied:** the order is now API key, Model + Local AI (one tab), Documents + Web references (one tab), Shortcuts/Auto, Appearance, Language, Privacy. Same options and look.
+
+## What's new in 0.16.0
+
+- **Web links are safer:** links to internal networks/hosts (`.local`, `.corp`, 100.64.x…) or with secrets in the URL (`access_token`, `sesskey`…) are rejected. If the model answers badly while web tools are on, Aqua retries once without them (the panel says so) instead of failing. A quota/timeout error with links on now hints to reduce links or turn them off.
+- **Ultra-small size:** when Auto is on it shows only a tiny `auto: on` tag.
+- **Settings reordered** (same options, same look): language, key, model, local AI, docs, web, shortcuts/Auto, appearance, privacy; in Appearance, size/side/background come first.
+
+## What's new in 0.15.0
+
+- **Auto mode goes strictly in page order**, from the first unanswered question down (it no longer jumps to the one after your last answer and then back to the top).
+- **Backup API key (optional):** in **Settings → API key** you can add a second key. If the main key runs out of its limit (quota) or is rejected, Aqua tries the backup automatically, keeps using it for about 10 minutes before trying the main one again, and tells you in the panel when the backup answered. Other errors (server, network, timeout) do not switch keys. **Google applies the limits per project, not per key:** a second key from the same project shares the quota and does not help; use a key from another project or a paid one, and check Google's terms before creating several free accounts or projects just to bypass the limits. Both keys are stored locally, like the main one.
+
+## What's new in 0.14.0
+
+- **Auto mode now also fills dropdown questions** (matching, and gaps filled from a list). Aqua numbers the dropdowns, asks the model for one option per gap and selects it only in gaps that are still empty. Text-box questions (short answer, numerical, essay, typed gaps) are still left for you.
+
+## What's new in 0.13.0
+
+- **Auto mode (optional, off by default):** turn it on in **Settings → Keyboard shortcuts**. With the panel open, pressing **+** (outside text fields) asks the model about the next unanswered multiple-choice question and ticks the suggested option. See [Auto mode](#auto-mode-optional).
 
 ## What's new in 0.12.0
 
@@ -246,6 +277,18 @@ Aqua does not run automatically in the background and does not submit anything t
 **Text** shows a small *Short · Long* choice only while it is selected, to save space. Written answers appear in small type (just so you can see how much text there is). If there are several separate texts, each goes on its own line. **Click a line to copy it** — there is no need to select it; it dims for a moment to confirm. The panel warns you if you try to use Quiz mode without answer options. The **Sent text** disclosure shows the exact text prepared for Gemini after the extension's redaction step, including any PDF excerpts.
 
 If the model cannot answer confidently, Aqua can label the result **Hypothesis** or **Insufficient data**. Any commands or instructions returned by the model are never executed.
+
+### Auto mode (optional)
+
+Off by default. Enable it in **Settings → Keyboard shortcuts → Auto mode**. With the panel open on a Moodle quiz page, pressing **+** (or the numpad +) outside any text field:
+
+1. looks for the first unanswered question **from the top of the page, in order** (questions you already answered are skipped);
+2. makes **one request** for that question, always in Quiz mode;
+3. ticks the suggested option(s) with a normal click — or, in questions with **dropdowns** (matching, gaps filled from a list), picks the suggested option in each empty dropdown — and scrolls to the next unanswered question.
+
+Guarantees: **one question per key press** (holding the key does not repeat); it never submits or finishes the quiz and never changes page; it does not touch a question that already has an answer (in dropdown questions, a dropdown you already chose is never changed), one you answered while it was waiting, or a page in review mode (disabled inputs); if a single-choice question gets several suggestions, or none, nothing is ticked and you are told. If the model was not sure (Hypothesis / Insufficient data) it still ticks, but warns you to check. Each press uses one API request, so it counts toward your quota like any other question.
+
+> Use it for practice and study only. Do not use it where AI help is not allowed (graded tests, exams). The model can be wrong: always check what was ticked.
 
 ### Image mode (paste a screenshot)
 

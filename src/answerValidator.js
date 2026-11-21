@@ -16,12 +16,19 @@
     let s = String(text || '').trim();
     const fence = s.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
     if (fence) s = fence[1];
-    try {
-      const v = JSON.parse(s);
-      if (v && typeof v === 'object' && !Array.isArray(v)) return v;
-    } catch (_) {
-      /* cae al error */
-    }
+    const tryParse = (t) => {
+      try {
+        const v = JSON.parse(t);
+        return v && typeof v === 'object' && !Array.isArray(v) ? v : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    // Con herramientas web (o sin esquema) el modelo puede escribir una frase antes o después del JSON: se toma el objeto de fuera a fuera.
+    const a = s.indexOf('{');
+    const b = s.lastIndexOf('}');
+    const v = tryParse(s) || (a >= 0 && b > a ? tryParse(s.slice(a, b + 1)) : null);
+    if (v) return v;
     throw new AquaError('INVALID_RESPONSE', 'JSON no válido');
   }
 
