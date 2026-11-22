@@ -245,8 +245,13 @@ async function saveWebSettings() {
   say('webStatus', dropped ? T('opt.webSavedDropped', { n: s.web.urls.length, d: dropped, max: S.MAX_WEB_LINKS }) : T('opt.webSaved', { n: s.web.urls.length }), dropped ? 'err' : 'ok');
 }
 
+const triggerLabel = (t) => (t === 'mouse:middle' ? T('opt.autoTriggerMouse') : t.slice(4).length === 1 ? t.slice(4).toUpperCase() : t.slice(4));
+let autoTrigger = S.DEFAULT_TRIGGER;
+
 async function saveAutoSettings() {
-  const s = S.sanitizeSettings({ ...(await currentSettings()), auto: { enabled: $('autoEnabled').checked } });
+  const s = S.sanitizeSettings({ ...(await currentSettings()), auto: { enabled: $('autoEnabled').checked, trigger: autoTrigger } });
+  autoTrigger = s.auto.trigger;
+  $('autoTrigger').value = triggerLabel(autoTrigger);
   await api.storage.local.set({ [SETTINGS]: s });
   say('autoStatus', T('opt.autoSaved'), 'ok');
 }
@@ -305,6 +310,8 @@ async function load() {
   paintDocsOptions(s.docs);
   $('webEnabled').checked = s.web.enabled;
   $('autoEnabled').checked = s.auto.enabled;
+  autoTrigger = s.auto.trigger;
+  $('autoTrigger').value = triggerLabel(autoTrigger);
   paintWebOptions(s.web);
   $('provider').value = s.provider;
   $('localUrl').value = s.local.url;
@@ -466,6 +473,23 @@ $('grantAccess').addEventListener('click', async () => {
 $('docsEnabled').addEventListener('change', saveDocsSettings);
 $('webEnabled').addEventListener('change', saveWebSettings);
 $('autoEnabled').addEventListener('change', saveAutoSettings);
+// Disparador: se hace clic en el campo y se pulsa la tecla (sin Ctrl/Alt) o el botón de la rueda.
+$('autoTrigger').addEventListener('keydown', (e) => {
+  if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
+  e.preventDefault();
+  if (e.ctrlKey || e.altKey || e.metaKey) return say('autoStatus', T('opt.autoTriggerNoMods'), 'err');
+  const t = S.cleanTrigger(`key:${e.key}`);
+  if (t === S.DEFAULT_TRIGGER && e.key !== '+') return say('autoStatus', T('opt.autoTriggerBad'), 'err');
+  autoTrigger = t;
+  saveAutoSettings();
+});
+$('autoTrigger').addEventListener('mousedown', (e) => {
+  if (e.button !== 1) return;
+  e.preventDefault();
+  autoTrigger = 'mouse:middle';
+  saveAutoSettings();
+});
+$('autoTriggerReset').addEventListener('click', () => { autoTrigger = S.DEFAULT_TRIGGER; saveAutoSettings(); });
 $('webSearch').addEventListener('change', saveWebSettings);
 $('webSave').addEventListener('click', saveWebSettings);
 $('docsK').addEventListener('change', saveDocsSettings);

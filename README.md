@@ -47,6 +47,10 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 
 > **Use Aqua responsibly.** It is intended for practice quizzes, revision pages and study materials. By default it does not fill in or submit Moodle forms; the optional [Auto mode](#auto-mode-optional) ticks one answer per key press and never submits. If you use it during an active quiz, confirm that AI assistance is permitted by your instructor. Do not use it for graded assessments where assistance is prohibited.
 
+## What's new in 0.18.0
+
+- **Configurable Auto trigger** (Settings → Shortcuts/Auto): click the field and press any single key (no Ctrl/Alt), F1–F12 or Insert, or press the **middle mouse button (wheel click)**. Default is still `+`. The wheel click only acts on empty page areas (never on links, buttons, text fields or Aqua's own panel) and blocks the browser's own middle-click action there; the Linux paste-on-middle-click only applies to text fields, which are skipped. Test it in real Firefox: it is only covered by simulated events.
+
 ## What's new in 0.17.2
 
 - **Matching questions** (dropdowns whose first option "Choose..." has value `0`, as in real Moodle) are now detected and filled by Auto. Before, Aqua treated that placeholder as a real option.

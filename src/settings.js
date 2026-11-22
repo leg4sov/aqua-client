@@ -142,9 +142,20 @@
   }
 
   // Modo Auto: apagado por defecto. Con él, la tecla + marca en la página la opción sugerida de UNA pregunta por pulsación.
-  const DEFAULT_AUTO = Object.freeze({ enabled: false });
+  // Disparador de Auto: 'key:<tecla>' (un carácter imprimible, F1–F12 o Insert; sin Ctrl/Alt/Meta) o 'mouse:middle' (botón de la rueda).
+  const DEFAULT_TRIGGER = 'key:+';
+  function cleanTrigger(t) {
+    if (t === 'mouse:middle') return t;
+    const m = /^key:(.{1,6})$/u.exec(typeof t === 'string' ? t : '');
+    if (!m) return DEFAULT_TRIGGER;
+    const k = m[1];
+    if (/^(F([1-9]|1[0-2])|Insert)$/.test(k)) return `key:${k}`;
+    return [...k].length === 1 && /^[\p{L}\p{N}\p{P}\p{S}]$/u.test(k) ? `key:${k.toLowerCase()}` : DEFAULT_TRIGGER;
+  }
+  const DEFAULT_AUTO = Object.freeze({ enabled: false, trigger: DEFAULT_TRIGGER });
   function sanitizeAuto(raw) {
-    return { enabled: !!raw && typeof raw === 'object' && raw.enabled === true };
+    const r = raw && typeof raw === 'object' ? raw : {};
+    return { enabled: r.enabled === true, trigger: cleanTrigger(r.trigger) };
   }
 
   function sanitizeSettings(raw) {
@@ -177,7 +188,7 @@
     return typeof key === 'string' && /^[\x21\x23-\x26\x28-\x7E]{20,256}$/.test(key.trim());
   }
 
-  const api = { PROVIDERS, DEFAULT_LOCAL, cleanLocalUrl, sanitizeLocal, DEFAULT_MODEL, SUGGESTED_MODELS, DEFAULTS, DEFAULT_PREFS, MODES, DEFAULT_UI, DEFAULT_IDLE, sanitizeIdle, DEFAULT_AUTO, sanitizeAuto, DEFAULT_DOCS, sanitizeDocs, MAX_WEB_LINKS, DEFAULT_WEB, cleanWebUrl, parseWebUrls, sanitizeWeb, SIZES, LANGS, DEFAULT_LANG, PALETTES, MIN_OPACITY, sanitizeUi, normalizeModelName, sanitizeSettings, sanitizePrefs, looksLikeApiKey };
+  const api = { PROVIDERS, DEFAULT_LOCAL, cleanLocalUrl, sanitizeLocal, DEFAULT_MODEL, SUGGESTED_MODELS, DEFAULTS, DEFAULT_PREFS, MODES, DEFAULT_UI, DEFAULT_IDLE, sanitizeIdle, DEFAULT_AUTO, DEFAULT_TRIGGER, cleanTrigger, sanitizeAuto, DEFAULT_DOCS, sanitizeDocs, MAX_WEB_LINKS, DEFAULT_WEB, cleanWebUrl, parseWebUrls, sanitizeWeb, SIZES, LANGS, DEFAULT_LANG, PALETTES, MIN_OPACITY, sanitizeUi, normalizeModelName, sanitizeSettings, sanitizePrefs, looksLikeApiKey };
   A.settings = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 })();

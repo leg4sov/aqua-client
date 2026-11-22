@@ -20,13 +20,13 @@ const Q = {
 };
 const answer = (selected, status = 'confirmed') => ({ ok: true, requestId: 'x', result: { status, module: '', selected, answerText: '', explanation: '', commands: [], caveats: '', warnings: [] }, redactions: 0 });
 
-function setup(qs, { auto = true, selected = [2], status, handler } = {}) {
+function setup(qs, { auto = true, selected = [2], status, handler, trigger } = {}) {
   const dom = makeDom(quiz(qs));
   const doc = dom.window.document;
   const calls = [];
   const send = async (msg) => {
     calls.push(msg);
-    if (msg.type === 'AQUA_GET_STATE') return { ok: true, lang: 'es', hasKey: true, maxChars: 6000, prefs: { mode: 'quiz' }, auto: { enabled: auto } };
+    if (msg.type === 'AQUA_GET_STATE') return { ok: true, lang: 'es', hasKey: true, maxChars: 6000, prefs: { mode: 'quiz' }, auto: { enabled: auto, ...(trigger ? { trigger } : {}) } };
     if (msg.type === 'AQUA_ASK') return handler ? handler(msg, doc) : answer(selected, status);
     return { ok: true };
   };
@@ -42,10 +42,19 @@ function setup(qs, { auto = true, selected = [2], status, handler } = {}) {
     await settle(12);
     return ev;
   };
+  const click = async (init = {}) => {
+    const tgt = init.target || doc.body;
+    const down = new dom.window.MouseEvent('mousedown', { button: 1, bubbles: true, cancelable: true, composed: true, ...init });
+    tgt.dispatchEvent(down);
+    const up = new dom.window.MouseEvent('mouseup', { button: 1, bubbles: true, cancelable: true, composed: true });
+    tgt.dispatchEvent(up);
+    await settle(12);
+    return { down, up };
+  };
   const asks = () => calls.filter((m) => m.type === 'AQUA_ASK');
   const checked = (q) => Array.from(doc.querySelectorAll(`input[name="q${q}"]`)).filter((i) => i.checked && i.value !== '-1').map((i) => i.value);
   const notice = () => doc.getElementById('aqua-host').shadowRoot.querySelector('.notice').textContent;
-  return { c, doc, dom, calls, press, asks, checked, notice, submitted: () => submitted };
+  return { c, doc, dom, calls, press, click, asks, checked, notice, submitted: () => submitted };
 }
 
 test('Auto apagado (por defecto): la tecla + no hace nada', async () => {
@@ -145,9 +154,9 @@ test('Auto: no toca preguntas con entradas desactivadas (revisión) ni sin panel
 });
 
 test('ajustes: auto apagado por defecto y saneado estricto', () => {
-  assert.deepEqual(S.sanitizeSettings({}).auto, { enabled: false });
-  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: 'true' } }).auto, { enabled: false });
-  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: true } }).auto, { enabled: true });
+  assert.deepEqual(S.sanitizeSettings({}).auto, { enabled: false, trigger: 'key:+' });
+  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: 'true' } }).auto, { enabled: false, trigger: 'key:+' });
+  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: true } }).auto, { enabled: true, trigger: 'key:+' });
 });
 
 // ---- Desplegables (emparejar, huecos con lista)
@@ -298,4 +307,39 @@ test('Auto: ordenar con la estructura de lista fuera de .answer', async () => {
   await t.press();
   assert.deepEqual(Array.from(t.doc.querySelectorAll('.sortablelist li')).map((l) => l.id), ['a4', 'a3', 'a2', 'a1']);
   assert.equal(t.doc.querySelector('input[type="hidden"]').value, 'a4,a3,a2,a1');
+});
+
+test('disparador configurable: otra tecla sustituye al + (que deja de funcionar)', async () => {
+  const t = setup([Q[1]()], { trigger: 'key:q' });
+  await t.c.show(CSS);
+  await t.press();
+  assert.equal(t.asks().length, 0);
+  await t.press({ key: 'Q' });
+  assert.equal(t.asks().length, 1);
+  assert.deepEqual(t.checked(1), ['1']);
+});
+
+test('disparador clic de rueda: actúa en zonas vacías, bloquea el clic central y respeta enlaces/campos/otros botones', async () => {
+  const t = setup([Q[1]()], { trigger: 'mouse:middle' });
+  await t.c.show(CSS);
+  await t.press(); // la tecla + ya no es el disparador
+  assert.equal(t.asks().length, 0);
+  t.doc.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#x">enlace</a><textarea id="ta"></textarea>');
+  await t.click({ target: t.doc.getElementById('lnk') });
+  await t.click({ target: t.doc.getElementById('ta') });
+  await t.click({ button: 0 });
+  await t.click({ button: 2 });
+  assert.equal(t.asks().length, 0);
+  const { down, up } = await t.click();
+  assert.equal(t.asks().length, 1);
+  assert.equal(down.defaultPrevented && up.defaultPrevented, true);
+  assert.deepEqual(t.checked(1), ['1']);
+});
+
+test('ajustes: el disparador se sanea (teclas válidas, rueda, resto vuelve a +)', () => {
+  const tr = (t) => S.sanitizeSettings({ auto: { enabled: true, trigger: t } }).auto.trigger;
+  assert.equal(tr('mouse:middle'), 'mouse:middle');
+  assert.equal(tr('key:F8'), 'key:F8');
+  assert.equal(tr('key:Q'), 'key:q');
+  for (const bad of ['key:', 'key: ', 'key:Enter', 'key:Tab', 'mouse:left', 5, null, 'key:ab']) assert.equal(tr(bad), 'key:+');
 });

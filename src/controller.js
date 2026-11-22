@@ -402,13 +402,40 @@
       }
     }
 
-    function onKey(e) {
-      if (!state.auto || !state.auto.enabled || state.locked || !panel || !panel.isVisible()) return;
-      if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return; // una pulsación = una pregunta; mantenerla no repite
-      if (e.key !== '+' && e.code !== 'NumpadAdd') return;
+    const trigger = () => (state.auto && state.auto.trigger) || 'key:+';
+    const autoReady = () => state.auto && state.auto.enabled && !state.locked && panel && panel.isVisible();
+    const editableTarget = (e) => {
       const t = (e.composedPath && e.composedPath()[0]) || e.target;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return; // no interfiere al escribir
+      return !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''));
+    };
+
+    function onKey(e) {
+      const tr = trigger();
+      if (!tr.startsWith('key:') || !autoReady()) return;
+      if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return; // una pulsación = una pregunta; mantenerla no repite
+      const want = tr.slice(4);
+      const hit = want.length === 1 ? e.key.toLowerCase() === want || (want === '+' && e.code === 'NumpadAdd') : e.key === want;
+      if (!hit || editableTarget(e)) return; // no interfiere al escribir
       e.preventDefault();
+      e.stopPropagation();
+      autoStep();
+    }
+
+    // Botón de la rueda: solo sobre zonas «vacías» (no enlaces, botones, campos ni el propio panel), para no romper abrir pestañas ni pegar.
+    let swallow = false;
+    function onMouse(e) {
+      if (e.type !== 'mousedown') {
+        if (swallow) { e.preventDefault(); e.stopPropagation(); } // mouseup/auxclick del mismo clic
+        return;
+      }
+      if (e.button !== 1 || trigger() !== 'mouse:middle' || !autoReady() || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      const path = (e.composedPath && e.composedPath()) || [];
+      const t = path[0] || e.target;
+      if (path.some((n) => n && n.id === 'aqua-host') || editableTarget(e)) return;
+      if (t && t.closest && t.closest('a[href],button,summary,label,[role="button"],[role="link"]')) return;
+      swallow = true;
+      setTimeout(() => { swallow = false; }, 600);
+      e.preventDefault(); // también evita el autoscroll del clic central
       e.stopPropagation();
       autoStep();
     }
@@ -416,11 +443,13 @@
     function bindKey() {
       if (keyBound) return;
       doc.addEventListener('keydown', onKey, true);
+      for (const t of ['mousedown', 'mouseup', 'auxclick']) doc.addEventListener(t, onMouse, true);
       keyBound = true;
     }
     function unbindKey() {
       if (!keyBound) return;
       doc.removeEventListener('keydown', onKey, true);
+      for (const t of ['mousedown', 'mouseup', 'auxclick']) doc.removeEventListener(t, onMouse, true);
       keyBound = false;
     }
 
@@ -465,7 +494,7 @@
       try {
         const st = await env.send({ type: 'AQUA_GET_STATE' });
         if (st && st.ok) {
-          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, auto: { enabled: !!(st.auto && st.auto.enabled) }, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
+          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, auto: { enabled: !!(st.auto && st.auto.enabled), trigger: (st.auto && st.auto.trigger) || 'key:+' }, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
           savedMode = st.prefs && st.prefs.mode;
         }
       } catch (_) {
