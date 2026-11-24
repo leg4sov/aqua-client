@@ -47,6 +47,10 @@ Aqua is a Manifest V3 browser extension that helps you review Moodle questions a
 
 > **Use Aqua responsibly.** It is intended for practice quizzes, revision pages and study materials. By default it does not fill in or submit Moodle forms; the optional [Auto mode](#auto-mode-optional) ticks one answer per key press and never submits. If you use it during an active quiz, confirm that AI assistance is permitted by your instructor. Do not use it for graded assessments where assistance is prohibited.
 
+## What's new in 0.18.3
+
+- **New icon:** a blue-cyan droplet with transparent background, in all sizes (16/32/48/128 PNG and an SVG).
+
 ## What's new in 0.18.2
 
 - **Auto scroll setting** (Settings → Shortcuts/Auto): when off, Auto no longer scrolls the page to the next question after answering one. On by default (previous behaviour).
