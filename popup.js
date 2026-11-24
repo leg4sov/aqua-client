@@ -33,12 +33,20 @@ async function saveUi(patch) {
   say('savedStatus', T('pop.saved'));
 }
 
+async function saveAuto(enabled) {
+  const cur = S.sanitizeSettings(await currentSettings());
+  const s = S.sanitizeSettings({ ...cur, auto: { ...cur.auto, enabled } }); // conserva disparador y desplazamiento
+  await api.storage.local.set({ [SETTINGS]: s });
+  say('savedStatus', T('pop.saved'));
+}
+
 async function load() {
   const o = await api.storage.local.get([KEY, SETTINGS]);
   const s = S.sanitizeSettings(o[SETTINGS]);
   lang = s.lang;
   $('uiSize').value = s.ui.size;
   $('hoverOnly').checked = s.ui.hoverOnly;
+  $('autoEnabled').checked = s.auto.enabled;
   applyI18n();
   say('keyStatus', o[KEY] ? T('opt.keyHas') : T('opt.keyNone'));
 }
@@ -71,6 +79,7 @@ $('more').addEventListener('click', async (e) => {
 });
 
 $('uiSize').addEventListener('change', () => saveUi({ size: $('uiSize').value }));
+$('autoEnabled').addEventListener('change', () => saveAuto($('autoEnabled').checked));
 $('hoverOnly').addEventListener('change', () => saveUi({ hoverOnly: $('hoverOnly').checked }));
 
 // ---- Brillo del navegador (vista inicial) ----

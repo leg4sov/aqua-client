@@ -33,6 +33,8 @@ button:disabled { opacity: .5; cursor: default; }
 button.primary { background: var(--aqua); border-color: var(--aqua); color: var(--primary-fg, #fff); font-weight: 600; flex: 1; }
 button.primary:hover:not(:disabled) { background: var(--aqua-dark); }
 button.icon { border: 0; background: transparent; padding: 0 3px; font-size: 1.15em; }
+button.docs { font-size: .8em; opacity: .5; }
+button.docs.on { opacity: 1; text-decoration: underline; }
 button.small { padding: 0 6px; font-size: .95em; align-self: flex-start; }
 /* Respuestas de texto: líneas pequeñas (solo para ver cuánto hay); un clic en una línea la copia */
 button.line { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 1px 2px; border-radius: 3px; font-size: .8em; line-height: 1.3; color: var(--fg); white-space: pre-wrap; word-break: break-word; }

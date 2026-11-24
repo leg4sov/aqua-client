@@ -64,6 +64,35 @@
       return `${p.text}\n\n— ${T('ctl.pdfHeader', { n: p.refs.length })} —\n${p.refs.map((h, i) => `[${i + 1}] p.${h.page}: ${h.text}`).join('\n')}`;
     }
 
+    // Búsqueda local en los PDF del usuario (sin red); si hay coincidencias se muestran en «Texto enviado».
+    function searchRefs(cur) {
+      if (!(state.docs && state.docs.enabled && cur.query)) return;
+      cur.refs = [];
+      cur.refsReady = env
+        .send({ type: 'AQUA_DOCS_SEARCH', query: cur.query })
+        .then((res) => {
+          if (payload !== cur || !res || !res.ok || !Array.isArray(res.hits)) return;
+          cur.refs = res.hits.slice(0, 8);
+          if (cur.refs.length) panel.setPreview(previewOf(cur), cur.note);
+        })
+        .catch(() => {});
+    }
+
+    // Interruptor rápido de los PDF (sin pasar por Ajustes). Afecta a la pregunta actual y a las siguientes.
+    async function toggleDocs() {
+      if (state.locked) return;
+      const res = await env.send({ type: 'AQUA_SET_DOCS', enabled: !(state.docs && state.docs.enabled) }).catch(() => null);
+      if (!res || !res.ok) return;
+      state.docs = { ...(state.docs || {}), enabled: res.enabled };
+      panel.setDocs(res.enabled);
+      panel.setNotice(T(res.enabled ? 'ctl.docsOn' : 'ctl.docsOff'), 'info');
+      if (payload) {
+        payload.refs = [];
+        panel.setPreview(previewOf(payload), payload.note);
+        searchRefs(payload);
+      }
+    }
+
     function setPayload(text, meta, options, note, number, queryText) {
       const prepared = norm.prepareForSending(text, { maxChars: state.maxChars });
       payload = null;
@@ -77,19 +106,9 @@
       const red = norm.countRedactions(prepared.redactions);
       panel.setNotice(red ? T('ctl.redacted', { n: red }) : '', 'info');
       panel.setPreview(prepared.text, note);
-      if (state.docs && state.docs.enabled && queryText) {
-        // Búsqueda local en los PDF del usuario (sin red); si hay coincidencias se muestran en «Texto enviado».
-        const cur = payload;
-        cur.refs = [];
-        cur.refsReady = env
-          .send({ type: 'AQUA_DOCS_SEARCH', query: queryText })
-          .then((res) => {
-            if (payload !== cur || !res || !res.ok || !Array.isArray(res.hits)) return;
-            cur.refs = res.hits.slice(0, 8);
-            if (cur.refs.length) panel.setPreview(previewOf(cur), note);
-          })
-          .catch(() => {});
-      }
+      payload.query = queryText;
+      payload.note = note;
+      searchRefs(payload);
       setState('idle');
       return true;
     }
@@ -256,6 +275,7 @@
     }
 
     function reveal(el) {
+      if (state.auto && state.auto.scroll === false) return; // ajuste: Auto no desplaza la pantalla
       if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
 
@@ -476,6 +496,7 @@
       onCancel: () => cancel(),
       onHide: () => hide(),
       onSettings: () => env.openSettings(),
+      onDocsToggle: () => toggleDocs(),
       onUnlock: async (password) => {
         const r = await env.send({ type: 'AQUA_UNLOCK', password }).catch(() => null);
         if (r && r.unlocked) setLocked(false);
@@ -494,7 +515,7 @@
       try {
         const st = await env.send({ type: 'AQUA_GET_STATE' });
         if (st && st.ok) {
-          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, auto: { enabled: !!(st.auto && st.auto.enabled), trigger: (st.auto && st.auto.trigger) || 'key:+' }, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
+          state = { provider: st.provider === 'local' ? 'local' : 'gemini', hasKey: !!st.hasKey, maxChars: st.maxChars || state.maxChars, ui: st.ui || null, idle: st.idle || state.idle, docs: st.docs || state.docs, auto: { enabled: !!(st.auto && st.auto.enabled), trigger: (st.auto && st.auto.trigger) || 'key:+', scroll: !(st.auto && st.auto.scroll === false) }, lang: i18n.LANGS.includes(st.lang) ? st.lang : i18n.DEFAULT_LANG, locked: !!st.locked };
           savedMode = st.prefs && st.prefs.mode;
         }
       } catch (_) {
@@ -531,6 +552,7 @@
       if (savedMode) panel.setMode(savedMode);
       panel.setImageAllowed(state.provider !== 'local'); // después de setMode: si se guardó «imagen», vuelve a Quiz
       bindKey();
+      panel.setDocs(!!(state.docs && state.docs.enabled));
       panel.setAutoTag(state.auto.enabled);
       if (state.auto.enabled && !panel.isUltra()) panel.setNotice(T('ctl.autoOn'), 'info'); // en ultra pequeño basta la etiqueta «auto: on»
       if (!state.hasKey && state.provider !== 'local') panel.setNotice(msg('NO_API_KEY'), 'warn');
@@ -549,6 +571,15 @@
     }
 
     // Cambio de proveedor con el atajo mientras el panel está abierto.
+    // Cambios de Auto hechos desde el popup o Ajustes mientras el panel está abierto.
+    function setAuto(a) {
+      if (!a || typeof a !== 'object') return;
+      state.auto = { enabled: a.enabled === true, trigger: a.trigger || 'key:+', scroll: a.scroll !== false };
+      if (!panel) return;
+      panel.setAutoTag(state.auto.enabled);
+      if (!panel.isUltra()) panel.setNotice(state.auto.enabled ? T('ctl.autoOn') : '', 'info');
+    }
+
     function setProvider(p) {
       state.provider = p === 'local' ? 'local' : 'gemini';
       if (state.provider === 'local') image = null;
@@ -559,6 +590,7 @@
       show,
       setSide,
       setProvider,
+      setAuto,
       setLocked,
       hide,
       isVisible: () => !!panel && panel.isVisible(),

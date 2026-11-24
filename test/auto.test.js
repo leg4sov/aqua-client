@@ -20,13 +20,15 @@ const Q = {
 };
 const answer = (selected, status = 'confirmed') => ({ ok: true, requestId: 'x', result: { status, module: '', selected, answerText: '', explanation: '', commands: [], caveats: '', warnings: [] }, redactions: 0 });
 
-function setup(qs, { auto = true, selected = [2], status, handler, trigger } = {}) {
+function setup(qs, { auto = true, selected = [2], status, handler, trigger, scroll } = {}) {
   const dom = makeDom(quiz(qs));
   const doc = dom.window.document;
   const calls = [];
   const send = async (msg) => {
     calls.push(msg);
-    if (msg.type === 'AQUA_GET_STATE') return { ok: true, lang: 'es', hasKey: true, maxChars: 6000, prefs: { mode: 'quiz' }, auto: { enabled: auto, ...(trigger ? { trigger } : {}) } };
+    if (msg.type === 'AQUA_GET_STATE') return { ok: true, lang: 'es', hasKey: true, maxChars: 6000, prefs: { mode: 'quiz' }, auto: { enabled: auto, ...(trigger ? { trigger } : {}), ...(scroll === false ? { scroll: false } : {}) } };
+    if (msg.type === 'AQUA_SET_DOCS') return { ok: true, enabled: msg.enabled };
+    if (msg.type === 'AQUA_DOCS_SEARCH') return { ok: true, hits: [] };
     if (msg.type === 'AQUA_ASK') return handler ? handler(msg, doc) : answer(selected, status);
     return { ok: true };
   };
@@ -154,9 +156,9 @@ test('Auto: no toca preguntas con entradas desactivadas (revisión) ni sin panel
 });
 
 test('ajustes: auto apagado por defecto y saneado estricto', () => {
-  assert.deepEqual(S.sanitizeSettings({}).auto, { enabled: false, trigger: 'key:+' });
-  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: 'true' } }).auto, { enabled: false, trigger: 'key:+' });
-  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: true } }).auto, { enabled: true, trigger: 'key:+' });
+  assert.deepEqual(S.sanitizeSettings({}).auto, { enabled: false, trigger: 'key:+', scroll: true });
+  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: 'true' } }).auto, { enabled: false, trigger: 'key:+', scroll: true });
+  assert.deepEqual(S.sanitizeSettings({ auto: { enabled: true } }).auto, { enabled: true, trigger: 'key:+', scroll: true });
 });
 
 // ---- Desplegables (emparejar, huecos con lista)
@@ -342,4 +344,52 @@ test('ajustes: el disparador se sanea (teclas válidas, rueda, resto vuelve a +)
   assert.equal(tr('key:F8'), 'key:F8');
   assert.equal(tr('key:Q'), 'key:q');
   for (const bad of ['key:', 'key: ', 'key:Enter', 'key:Tab', 'mouse:left', 5, null, 'key:ab']) assert.equal(tr(bad), 'key:+');
+});
+
+test('botón «pdf» del panel: activa y desactiva los PDF sin pasar por Ajustes', async () => {
+  const t = setup([Q[1]()]);
+  await t.c.show(CSS);
+  const b = t.doc.getElementById('aqua-host').shadowRoot.querySelector('button.docs');
+  assert.equal(b.getAttribute('aria-pressed'), 'false');
+  b.click();
+  await settle(12);
+  assert.deepEqual(t.calls.filter((m) => m.type === 'AQUA_SET_DOCS').map((m) => m.enabled), [true]);
+  assert.equal(b.getAttribute('aria-pressed'), 'true');
+  await t.press(); // con los PDF activados, la búsqueda local se hace antes de preguntar
+  assert.ok(t.calls.some((m) => m.type === 'AQUA_DOCS_SEARCH'));
+  b.click();
+  await settle(12);
+  assert.deepEqual(t.calls.filter((m) => m.type === 'AQUA_SET_DOCS').map((m) => m.enabled), [true, false]);
+  assert.equal(b.getAttribute('aria-pressed'), 'false');
+});
+
+test('background: AQUA_SET_DOCS solo viene de pestañas, está tras la contraseña y solo cambia docs.enabled', () => {
+  const bg = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'background.js'), 'utf8');
+  assert.match(bg, /const GATED = \[[^\]]*'AQUA_SET_DOCS'/);
+  const h = bg.slice(bg.indexOf("case 'AQUA_SET_DOCS'"), bg.indexOf("case 'AQUA_SET_PREFS'"));
+  assert.ok(h.includes('tabId === undefined') && h.includes('msg.enabled === true') && h.includes('...cur.docs'));
+});
+
+test('Auto: con «desplazar» apagado la pantalla no se mueve; encendido (por defecto) sí', async () => {
+  for (const [scroll, expected] of [[false, 0], [undefined, 1]]) {
+    const t = setup([Q[1](), Q[2]()], scroll === false ? { scroll: false } : {});
+    await t.c.show(CSS);
+    let n = 0;
+    t.doc.getElementById('question-2').scrollIntoView = () => { n++; };
+    await t.press();
+    assert.equal(n, expected);
+  }
+});
+
+test('Auto: activarlo/desactivarlo desde el popup con el panel abierto se aplica al momento (setAuto)', async () => {
+  const t = setup([Q[1]()], { auto: false });
+  await t.c.show(CSS);
+  await t.press();
+  assert.equal(t.asks().length, 0);
+  t.c.setAuto({ enabled: true, trigger: 'key:+', scroll: true });
+  await t.press();
+  assert.equal(t.asks().length, 1);
+  t.c.setAuto({ enabled: false });
+  await t.press();
+  assert.equal(t.asks().length, 1);
 });

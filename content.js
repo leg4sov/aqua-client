@@ -12,6 +12,12 @@
     openSettings: () => api.runtime.sendMessage({ type: 'AQUA_OPEN_OPTIONS' }).catch(() => {}),
   });
 
+  // Auto activado/desactivado o ajustes de Auto cambiados (popup o Ajustes) con el panel ya abierto.
+  if (api.storage && api.storage.onChanged) api.storage.onChanged.addListener((changes, area) => {
+    const c = area === 'local' && changes['aqua.settings'];
+    if (c && c.newValue && globalThis.Aqua.settings) controller.setAuto(globalThis.Aqua.settings.sanitizeSettings(c.newValue).auto);
+  });
+
   api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || sender.id !== api.runtime.id) return false;
     if (msg.type === 'AQUA_PING') {

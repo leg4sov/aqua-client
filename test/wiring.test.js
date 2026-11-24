@@ -24,7 +24,7 @@ function loadBackground({ store = {}, fetchImpl }) {
     action: { onClicked: ev.onClicked, setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
     tabs: { onRemoved: ev.onRemoved, query: async () => [{ id: 1 }], sendMessage: async (id, m) => { sent.push([id, m]); if (m.type === 'AQUA_PING') throw new Error('no receiver'); return { ok: true }; } },
     scripting: { executeScript: async (o) => { sent.push(['inject', o.files, o.args]); } },
-    storage: { local: { get: async (keys) => Object.fromEntries([].concat(keys).filter((k) => k in store).map((k) => [k, store[k]])), set: async (o) => Object.assign(store, o), remove: async (k) => delete store[k], setAccessLevel: async () => {} } },
+    storage: { onChanged: { addListener() {} }, local: { get: async (keys) => Object.fromEntries([].concat(keys).filter((k) => k in store).map((k) => [k, store[k]])), set: async (o) => Object.assign(store, o), remove: async (k) => delete store[k], setAccessLevel: async () => {} } },
   };
   const { IDBFactory } = require('fake-indexeddb');
   const context = { indexedDB: new IDBFactory(), chrome: api, fetch: async (u) => (String(u).endsWith('styles.css') ? { text: async () => 'css' } : fetchImpl(...arguments)), console, setTimeout, clearTimeout, AbortController, crypto: globalThis.crypto, URL };

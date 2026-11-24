@@ -49,7 +49,7 @@ async function getConfig() {
 
 // Contraseña de acceso: una vez por sesión del navegador. Con ella bloqueada no se atiende nada que gaste la API.
 const lock = LK.createLock(api.storage.session);
-const GATED = ['AQUA_ASK', 'AQUA_IMG_READ', 'AQUA_DOCS_SEARCH', 'AQUA_TEST'];
+const GATED = ['AQUA_ASK', 'AQUA_IMG_READ', 'AQUA_DOCS_SEARCH', 'AQUA_TEST', 'AQUA_SET_DOCS'];
 
 // Avisa a los paneles abiertos de que ya se puede usar (contraseña puesta en Ajustes, popup u otra pestaña).
 async function broadcastUnlocked() {
@@ -199,6 +199,13 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const o = await api.storage.local.get([KEY, KEY2, SETTINGS, PREFS]);
         const settings = S.sanitizeSettings(o[SETTINGS]);
         return { ok: true, locked: await lock.isLocked(), hasKey: !!o[KEY] || !!o[KEY2], provider: settings.provider, maxChars: settings.maxChars, ui: settings.ui, idle: settings.idle, docs: settings.docs, auto: settings.auto, lang: settings.lang, prefs: S.sanitizePrefs(o[PREFS]) };
+      }
+      case 'AQUA_SET_DOCS': { // interruptor rápido de los PDF desde el panel (el resto de ajustes de docs no cambia)
+        if (tabId === undefined) return { ok: false, error: E.toPlain(new E.AquaError('FORBIDDEN_SENDER')) };
+        const cur = S.sanitizeSettings((await api.storage.local.get([SETTINGS]))[SETTINGS]);
+        const next = S.sanitizeSettings({ ...cur, docs: { ...cur.docs, enabled: msg.enabled === true } });
+        await api.storage.local.set({ [SETTINGS]: next });
+        return { ok: true, enabled: next.docs.enabled };
       }
       case 'AQUA_SET_PREFS':
         if (tabId === undefined) return { ok: false };

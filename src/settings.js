@@ -152,10 +152,10 @@
     if (/^(F([1-9]|1[0-2])|Insert)$/.test(k)) return `key:${k}`;
     return [...k].length === 1 && /^[\p{L}\p{N}\p{P}\p{S}]$/u.test(k) ? `key:${k.toLowerCase()}` : DEFAULT_TRIGGER;
   }
-  const DEFAULT_AUTO = Object.freeze({ enabled: false, trigger: DEFAULT_TRIGGER });
+  const DEFAULT_AUTO = Object.freeze({ enabled: false, trigger: DEFAULT_TRIGGER, scroll: true });
   function sanitizeAuto(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
-    return { enabled: r.enabled === true, trigger: cleanTrigger(r.trigger) };
+    return { enabled: r.enabled === true, trigger: cleanTrigger(r.trigger), scroll: r.scroll !== false };
   }
 
   function sanitizeSettings(raw) {

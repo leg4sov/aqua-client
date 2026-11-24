@@ -46,7 +46,11 @@
     const bHide = btn('✕', 'icon', () => h.onHide());
     bHide.title = T('ui.hideTip');
     bHide.setAttribute('aria-label', T('ui.hide'));
-    header.append(bSettings, bHide);
+    const bDocs = btn('pdf', 'icon docs', () => h.onDocsToggle());
+    bDocs.title = T('ui.docsTip');
+    bDocs.setAttribute('aria-label', T('ui.docsTip'));
+    bDocs.setAttribute('aria-pressed', 'false');
+    header.append(bDocs, bSettings, bHide);
     panel.appendChild(header);
 
     // Con la contraseña sin poner: solo esta cajita (el cuerpo del panel queda oculto).
@@ -294,6 +298,10 @@
       setStatus(state, text) {
         badge.className = `badge ${state}`;
         badge.textContent = text || T(`status.${state}`);
+      },
+      setDocs(on) {
+        bDocs.classList.toggle('on', !!on);
+        bDocs.setAttribute('aria-pressed', String(!!on));
       },
       setAutoTag(on) {
         autotag.hidden = !on;

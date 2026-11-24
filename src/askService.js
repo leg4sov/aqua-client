@@ -118,7 +118,7 @@
           let r;
           let usedBackup = false;
           if (local) {
-            r = await deps.local.generate({ ...common, url: settings.local.url, model: settings.local.model, timeoutMs: settings.local.timeoutMs, temperature: m.mode === 'quiz' ? 0.1 : 0.6 });
+            r = await deps.local.generate({ ...common, url: settings.local.url, model: settings.local.model, timeoutMs: settings.local.timeoutMs, temperature: ['quiz', 'select', 'order', 'fill'].includes(m.mode) ? 0.1 : 0.6 });
           } else {
             const tools = withWeb ? [{ url_context: {} }, ...(web.search ? [{ google_search: {} }] : [])] : undefined;
             const x = await withKeys(apiKey, apiKey2, (key) => deps.gemini.generate({ ...common, apiKey: key, model: settings.model, timeoutMs: settings.timeoutMs, image: m.image, tools }));

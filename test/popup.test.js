@@ -117,3 +117,14 @@ test('popup: el interruptor «invisible salvo con el ratón encima» se guarda e
   await settle();
   assert.equal(p.store['aqua.settings'].ui.hoverOnly, false);
 });
+
+test('popup: activar/desactivar Auto se guarda sin perder el disparador ni el desplazamiento', async () => {
+  const p = openPopup({ store: { 'aqua.settings': { lang: 'es', auto: { enabled: false, trigger: 'mouse:middle', scroll: false } } } });
+  await settle();
+  assert.equal(p.$('autoEnabled').checked, false);
+  p.$('autoEnabled').checked = true;
+  p.$('autoEnabled').dispatchEvent(new p.w.Event('change'));
+  await settle();
+  const a = p.store['aqua.settings'].auto;
+  assert.deepEqual([a.enabled, a.trigger, a.scroll], [true, 'mouse:middle', false]);
+});

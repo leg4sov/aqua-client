@@ -1,6 +1,6 @@
 {
   "name": "aqua-client",
-  "version": "0.18.0",
+  "version": "0.18.2",
   "private": true,
   "description": "Aqua: study panel for Moodle quizzes (Manifest V3, Gemini API)",
   "license": "MIT",

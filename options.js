@@ -249,7 +249,7 @@ const triggerLabel = (t) => (t === 'mouse:middle' ? T('opt.autoTriggerMouse') : 
 let autoTrigger = S.DEFAULT_TRIGGER;
 
 async function saveAutoSettings() {
-  const s = S.sanitizeSettings({ ...(await currentSettings()), auto: { enabled: $('autoEnabled').checked, trigger: autoTrigger } });
+  const s = S.sanitizeSettings({ ...(await currentSettings()), auto: { enabled: $('autoEnabled').checked, trigger: autoTrigger, scroll: $('autoScroll').checked } });
   autoTrigger = s.auto.trigger;
   $('autoTrigger').value = triggerLabel(autoTrigger);
   await api.storage.local.set({ [SETTINGS]: s });
@@ -310,6 +310,7 @@ async function load() {
   paintDocsOptions(s.docs);
   $('webEnabled').checked = s.web.enabled;
   $('autoEnabled').checked = s.auto.enabled;
+  $('autoScroll').checked = s.auto.scroll;
   autoTrigger = s.auto.trigger;
   $('autoTrigger').value = triggerLabel(autoTrigger);
   paintWebOptions(s.web);
@@ -473,6 +474,7 @@ $('grantAccess').addEventListener('click', async () => {
 $('docsEnabled').addEventListener('change', saveDocsSettings);
 $('webEnabled').addEventListener('change', saveWebSettings);
 $('autoEnabled').addEventListener('change', saveAutoSettings);
+$('autoScroll').addEventListener('change', saveAutoSettings);
 // Disparador: se hace clic en el campo y se pulsa la tecla (sin Ctrl/Alt) o el botón de la rueda.
 $('autoTrigger').addEventListener('keydown', (e) => {
   if (['Tab', 'Shift', 'Control', 'Alt', 'Meta', 'Escape'].includes(e.key)) return;
